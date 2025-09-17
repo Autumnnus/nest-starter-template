@@ -1,0 +1,56 @@
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common';
+import { Request } from 'express';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Idempotent } from '../common/decorators/idempotent.decorator';
+import { Public } from '../common/decorators/public.decorator';
+import { RateLimit } from '../common/decorators/rate-limit.decorator';
+import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import { AuthService } from './auth.service';
+import { validateLoginRequest } from './dto/login.dto';
+import { validateRefreshTokenRequest } from './dto/refresh-token.dto';
+
+@Controller({ path: 'auth', version: '1' })
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('login')
+  @Idempotent()
+  @RateLimit({ limit: 5, windowMs: 60_000 })
+  async login(@Body() body: unknown, @Req() request: Request) {
+    const payload = validateLoginRequest(body);
+    const tokens = await this.authService.login(payload, request.traceId, {
+      ipAddress: request.ip,
+      userAgent: request.headers['user-agent'] as string | undefined,
+    });
+    return tokens;
+  }
+
+  @Public()
+  @Post('refresh')
+  @Idempotent()
+  @RateLimit({ limit: 10, windowMs: 60_000 })
+  async refresh(@Body() body: unknown, @Req() request: Request) {
+    const payload = validateRefreshTokenRequest(body);
+    return this.authService.refreshTokens(payload, request.traceId);
+  }
+
+  @Get('sessions')
+  async sessions(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.listSessions(user.id);
+  }
+
+  @Delete('sessions/:sessionId')
+  @Idempotent()
+  @RateLimit({ limit: 30, windowMs: 60_000 })
+  async revokeSession(@CurrentUser() user: AuthenticatedUser, @Param('sessionId') sessionId: string, @Req() request: Request) {
+    if (!sessionId) {
+      throw new BadRequestException({
+        code: 'SESSION_ID_REQUIRED',
+        message: 'sessionId is required.',
+      });
+    }
+    this.authService.revokeSession(user.id, sessionId, request.traceId);
+    return { status: 'revoked', sessionId };
+  }
+}
