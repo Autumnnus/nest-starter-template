@@ -1,10 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../common/services/audit.service';
 import { Role } from '../common/types/role.enum';
-import { paginateArray, PaginatedResult } from '../common/utils/pagination.util';
+import {
+  paginateArray,
+  PaginatedResult,
+} from '../common/utils/pagination.util';
 import { ListUsersQuery } from './dto/list-users.dto';
 import { UpdateUserRequest } from './dto/update-user.dto';
-import { PublicUser, UserProfile, UserRecord } from './interfaces/user.interface';
+import {
+  PublicUser,
+  UserProfile,
+  UserRecord,
+} from './interfaces/user.interface';
 
 @Injectable()
 export class UsersService {
@@ -68,7 +75,10 @@ export class UsersService {
     });
 
     const sorted = [...filtered].sort((a, b) => a.email.localeCompare(b.email));
-    const paginated = paginateArray(sorted, { page: query.page, limit: query.limit });
+    const paginated = paginateArray(sorted, {
+      page: query.page,
+      limit: query.limit,
+    });
 
     return {
       data: paginated.data.map((user) => this.toPublicUser(user)),
@@ -87,7 +97,11 @@ export class UsersService {
     return this.toPublicUser(record);
   }
 
-  updateUser(userId: string, request: UpdateUserRequest, traceId: string | undefined): PublicUser {
+  updateUser(
+    userId: string,
+    request: UpdateUserRequest,
+    traceId: string | undefined,
+  ): PublicUser {
     const record = this.findUserRecordById(userId);
     if (!record) {
       throw new NotFoundException({
@@ -118,7 +132,11 @@ export class UsersService {
 
   validateCredentials(email: string, password: string): UserRecord | undefined {
     const normalizedEmail = email.toLowerCase();
-    return this.users.find((user) => user.email.toLowerCase() === normalizedEmail && user.password === password);
+    return this.users.find(
+      (user) =>
+        user.email.toLowerCase() === normalizedEmail &&
+        user.password === password,
+    );
   }
 
   findUserRecordById(userId: string): UserRecord | undefined {

@@ -1,4 +1,7 @@
-import { ValidationException, Validator } from '../../common/utils/validation.util';
+import {
+  ValidationException,
+  Validator,
+} from '../../common/utils/validation.util';
 import { UserProfile } from '../interfaces/user.interface';
 
 export interface UpdateUserRequest {
@@ -15,11 +18,18 @@ export function validateUpdateUserRequest(payload: unknown): UpdateUserRequest {
   }
 
   const profileInput = (profileSource ?? {}) as Record<string, unknown>;
-  const displayName = Validator.optionalString(profileInput, 'displayName', errors, { minLength: 2, maxLength: 80 });
+  const displayName = Validator.optionalString(
+    profileInput,
+    'displayName',
+    errors,
+    { minLength: 2, maxLength: 80 },
+  );
   const locale = Validator.optionalString(profileInput, 'locale', errors, {
     pattern: /^[a-z]{2}-[A-Z]{2}$/,
   });
-  const bio = Validator.optionalString(profileInput, 'bio', errors, { maxLength: 500 });
+  const bio = Validator.optionalString(profileInput, 'bio', errors, {
+    maxLength: 500,
+  });
 
   if (errors.length > 0) {
     throw new ValidationException(errors);

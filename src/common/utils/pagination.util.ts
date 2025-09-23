@@ -14,7 +14,10 @@ export interface PaginatedResult<T> {
   pagination: PaginationMeta;
 }
 
-export function paginateArray<T>(items: T[], { page, limit }: PaginationInput): PaginatedResult<T> {
+export function paginateArray<T>(
+  items: T[],
+  { page, limit }: PaginationInput,
+): PaginatedResult<T> {
   const safePage = page > 0 ? page : 1;
   const safeLimit = limit > 0 ? limit : 10;
   const start = (safePage - 1) * safeLimit;

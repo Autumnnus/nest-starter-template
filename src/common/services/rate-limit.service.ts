@@ -14,7 +14,10 @@ export class RateLimitService {
     windowMs: 60_000,
   };
 
-  consume(key: string, options?: RateLimitOptions): { allowed: boolean; retryAfterSeconds?: number } {
+  consume(
+    key: string,
+    options?: RateLimitOptions,
+  ): { allowed: boolean; retryAfterSeconds?: number } {
     const config = options ?? this.defaultOptions;
     const now = Date.now();
     const bucket = this.buckets.get(key) ?? {

@@ -1,14 +1,23 @@
-import { Controller, Get, Param, Patch, Query, Body, Req, ForbiddenException } from '@nestjs/common';
-import { Request } from 'express';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Query,
+  Req,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Idempotent } from '../common/decorators/idempotent.decorator';
 import { RateLimit } from '../common/decorators/rate-limit.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/types/role.enum';
-import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { UsersService } from './users.service';
 import { validateListUsersQuery } from './dto/list-users.dto';
 import { validateUpdateUserRequest } from './dto/update-user.dto';
+import { UsersService } from './users.service';
 
 @Controller({ path: 'users', version: '1' })
 export class UsersController {
@@ -22,9 +31,14 @@ export class UsersController {
   }
 
   @Get(':id')
-  getUser(@Param('id') userId: string, @CurrentUser() currentUser: AuthenticatedUser) {
+  getUser(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
     const isSelf = currentUser.id === userId;
-    const hasPrivilege = currentUser.roles.includes(Role.Admin) || currentUser.roles.includes(Role.Moderator);
+    const hasPrivilege =
+      currentUser.roles.includes(Role.Admin) ||
+      currentUser.roles.includes(Role.Moderator);
     if (!isSelf && !hasPrivilege) {
       throw new ForbiddenException({
         code: 'ACCESS_DENIED',
@@ -48,7 +62,8 @@ export class UsersController {
     if (!isSelf && !isAdmin) {
       throw new ForbiddenException({
         code: 'NOT_OWNER_OF_PROFILE',
-        message: 'You can only update your own profile unless you are an administrator.',
+        message:
+          'You can only update your own profile unless you are an administrator.',
       });
     }
     const updateRequest = validateUpdateUserRequest(body);

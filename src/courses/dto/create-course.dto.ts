@@ -1,4 +1,7 @@
-import { ValidationException, Validator } from '../../common/utils/validation.util';
+import {
+  ValidationException,
+  Validator,
+} from '../../common/utils/validation.util';
 
 export interface CreateCourseLessonInput {
   title: string;
@@ -16,16 +19,33 @@ export interface CreateCourseRequest {
   lessons: CreateCourseLessonInput[];
 }
 
-export function validateCreateCourseRequest(payload: unknown): CreateCourseRequest {
+export function validateCreateCourseRequest(
+  payload: unknown,
+): CreateCourseRequest {
   const errors: string[] = [];
   const source = Validator.ensureObject(payload, errors);
-  const title = Validator.requiredString(source, 'title', errors, { minLength: 4, maxLength: 160 });
-  const description = Validator.requiredString(source, 'description', errors, { minLength: 10 });
+  const title = Validator.requiredString(source, 'title', errors, {
+    minLength: 4,
+    maxLength: 160,
+  });
+  const description = Validator.requiredString(source, 'description', errors, {
+    minLength: 10,
+  });
   const tags = Validator.optionalStringArray(source, 'tags', errors) ?? [];
   const startsAt = Validator.requiredDate(source, 'startsAt', errors);
   const endsAt = Validator.requiredDate(source, 'endsAt', errors);
-  const instructorId = Validator.requiredString(source, 'instructorId', errors, { minLength: 3 });
-  const capacity = Validator.optionalNumber(source, 'capacity', errors, { min: 1, max: 500, integer: true }) ?? 50;
+  const instructorId = Validator.requiredString(
+    source,
+    'instructorId',
+    errors,
+    { minLength: 3 },
+  );
+  const capacity =
+    Validator.optionalNumber(source, 'capacity', errors, {
+      min: 1,
+      max: 500,
+      integer: true,
+    }) ?? 50;
 
   const lessonsSource = source.lessons;
   if (!Array.isArray(lessonsSource) || lessonsSource.length === 0) {
@@ -40,11 +60,21 @@ export function validateCreateCourseRequest(payload: unknown): CreateCourseReque
         return;
       }
       const lessonRecord = lesson as Record<string, unknown>;
-      const lessonTitle = Validator.requiredString(lessonRecord, 'title', errors, { minLength: 3, maxLength: 160 });
-      const duration = Validator.optionalNumber(lessonRecord, 'durationMinutes', errors, {
-        min: 5,
-        max: 600,
-      });
+      const lessonTitle = Validator.requiredString(
+        lessonRecord,
+        'title',
+        errors,
+        { minLength: 3, maxLength: 160 },
+      );
+      const duration = Validator.optionalNumber(
+        lessonRecord,
+        'durationMinutes',
+        errors,
+        {
+          min: 5,
+          max: 600,
+        },
+      );
       if (duration === undefined) {
         errors.push(`lessons[${index}].durationMinutes is required.`);
         return;

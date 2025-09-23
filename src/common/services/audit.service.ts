@@ -15,7 +15,14 @@ export class AuditService {
   private readonly logger = new Logger(AuditService.name);
   private readonly records: AuditRecord[] = [];
 
-  record(event: string, details: { userId?: string; traceId?: string; metadata?: Record<string, unknown> }) {
+  record(
+    event: string,
+    details: {
+      userId?: string;
+      traceId?: string;
+      metadata?: Record<string, unknown>;
+    },
+  ) {
     const entry: AuditRecord = {
       id: randomUUID(),
       event,
@@ -25,7 +32,9 @@ export class AuditService {
       metadata: details.metadata,
     };
     this.records.push(entry);
-    this.logger.log(`${event} ${JSON.stringify({ userId: entry.userId, traceId: entry.traceId })}`);
+    this.logger.log(
+      `${event} ${JSON.stringify({ userId: entry.userId, traceId: entry.traceId })}`,
+    );
   }
 
   findAll(): AuditRecord[] {

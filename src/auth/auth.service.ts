@@ -1,11 +1,17 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/require-await */
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { createHmac } from 'crypto';
+import { Role } from 'src/common/types/role.enum';
 import { AuditService } from '../common/services/audit.service';
-import { SessionRecord, SessionStore } from './session.store';
+import { UsersService } from '../users/users.service';
 import { LoginRequest } from './dto/login.dto';
 import { RefreshTokenRequest } from './dto/refresh-token.dto';
-import { UsersService } from '../users/users.service';
-import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import { SessionRecord, SessionStore } from './session.store';
 
 interface JwtPayload {
   sub: string;
@@ -16,7 +22,7 @@ interface JwtPayload {
   exp: number;
 }
 
-interface SignedTokens {
+export interface SignedTokens {
   tokenType: 'Bearer';
   accessToken: string;
   expiresIn: number;
@@ -41,7 +47,10 @@ export class AuthService {
     traceId: string | undefined,
     metadata: { ipAddress?: string; userAgent?: string },
   ): Promise<SignedTokens> {
-    const user = this.usersService.validateCredentials(request.email, request.password);
+    const user = this.usersService.validateCredentials(
+      request.email,
+      request.password,
+    );
     if (!user) {
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
@@ -56,7 +65,12 @@ export class AuthService {
       userAgent: metadata.userAgent,
     });
 
-    const tokens = this.generateTokens(user.id, user.email, user.roles, session);
+    const tokens = this.generateTokens(
+      user.id,
+      user.email,
+      user.roles,
+      session,
+    );
 
     this.auditService.record('auth.login', {
       userId: user.id,
@@ -71,7 +85,10 @@ export class AuthService {
     return tokens;
   }
 
-  async refreshTokens(request: RefreshTokenRequest, traceId: string | undefined): Promise<SignedTokens> {
+  async refreshTokens(
+    request: RefreshTokenRequest,
+    traceId: string | undefined,
+  ): Promise<SignedTokens> {
     const session = this.sessionStore.findByRefreshToken(request.refreshToken);
     if (!session) {
       throw new UnauthorizedException({
@@ -97,7 +114,10 @@ export class AuthService {
       });
     }
 
-    const rotated = this.sessionStore.rotateRefreshToken(session.id, this.refreshTokenTtlMs);
+    const rotated = this.sessionStore.rotateRefreshToken(
+      session.id,
+      this.refreshTokenTtlMs,
+    );
     if (!rotated) {
       throw new UnauthorizedException({
         code: 'SESSION_NOT_ACTIVE',
@@ -105,7 +125,12 @@ export class AuthService {
       });
     }
 
-    const tokens = this.generateTokens(user.id, user.email, user.roles, rotated);
+    const tokens = this.generateTokens(
+      user.id,
+      user.email,
+      user.roles,
+      rotated,
+    );
 
     this.auditService.record('auth.refresh', {
       userId: user.id,
@@ -118,7 +143,12 @@ export class AuthService {
     return tokens;
   }
 
-  async verifyAccessToken(token: string): Promise<AuthenticatedUser> {
+  async verifyAccessToken(token: string): Promise<{
+    id: string;
+    email: string;
+    roles: Role[];
+    sessionId: string;
+  }> {
     const payload = this.decodeAndVerifyToken(token);
     if (payload.exp * 1000 <= Date.now()) {
       throw new UnauthorizedException({
@@ -151,14 +181,24 @@ export class AuthService {
     };
   }
 
-  listSessions(userId: string): Omit<SessionRecord, 'refreshToken' | 'userId'>[] {
+  listSessions(
+    userId: string,
+  ): Omit<SessionRecord, 'refreshToken' | 'userId'>[] {
     return this.sessionStore
       .listByUser(userId)
-      .map(({ refreshToken: _refreshToken, userId: _userId, ...rest }) => ({ ...rest }));
+      .map(({ refreshToken: _refreshToken, userId: _userId, ...rest }) => ({
+        ...rest,
+      }));
   }
 
-  revokeSession(userId: string, sessionId: string, traceId: string | undefined) {
-    const session = this.sessionStore.listByUser(userId).find((record) => record.id === sessionId);
+  revokeSession(
+    userId: string,
+    sessionId: string,
+    traceId: string | undefined,
+  ) {
+    const session = this.sessionStore
+      .listByUser(userId)
+      .find((record) => record.id === sessionId);
     if (!session) {
       throw new NotFoundException({
         code: 'SESSION_NOT_FOUND',
@@ -173,7 +213,12 @@ export class AuthService {
     });
   }
 
-  private generateTokens(userId: string, email: string, roles: string[], session: SessionRecord): SignedTokens {
+  private generateTokens(
+    userId: string,
+    email: string,
+    roles: string[],
+    session: SessionRecord,
+  ): SignedTokens {
     const activeSession = this.sessionStore.touch(session.id) ?? session;
     const now = Math.floor(Date.now() / 1000);
     const payload: JwtPayload = {
@@ -184,7 +229,9 @@ export class AuthService {
       iat: now,
       exp: now + Math.floor(this.accessTokenTtlMs / 1000),
     };
-    const header = this.base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const header = this.base64UrlEncode(
+      JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+    );
     const body = this.base64UrlEncode(JSON.stringify(payload));
     const signature = this.sign(`${header}.${body}`);
     const token = `${header}.${body}.${signature}`;
@@ -222,7 +269,9 @@ export class AuthService {
       });
     }
 
-    const payloadJson = Buffer.from(payloadSegment, 'base64url').toString('utf8');
+    const payloadJson = Buffer.from(payloadSegment, 'base64url').toString(
+      'utf8',
+    );
     const payload = JSON.parse(payloadJson) as JwtPayload;
 
     if (!payload.sub || !payload.sessionId) {
@@ -236,7 +285,9 @@ export class AuthService {
   }
 
   private sign(content: string): string {
-    return createHmac('sha256', this.jwtSecret).update(content).digest('base64url');
+    return createHmac('sha256', this.jwtSecret)
+      .update(content)
+      .digest('base64url');
   }
 
   private base64UrlEncode(content: string): string {

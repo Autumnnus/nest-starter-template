@@ -23,7 +23,11 @@ export class SessionStore {
   private readonly sessions = new Map<string, SessionRecord>();
   private readonly refreshTokenIndex = new Map<string, string>();
 
-  create(userId: string, ttlMs: number, device?: SessionDeviceInfo): SessionRecord {
+  create(
+    userId: string,
+    ttlMs: number,
+    device?: SessionDeviceInfo,
+  ): SessionRecord {
     const id = randomUUID();
     const now = new Date();
     const refreshToken = randomBytes(48).toString('hex');
@@ -49,7 +53,10 @@ export class SessionStore {
     return this.sessions.get(sessionId);
   }
 
-  rotateRefreshToken(sessionId: string, ttlMs: number): SessionRecord | undefined {
+  rotateRefreshToken(
+    sessionId: string,
+    ttlMs: number,
+  ): SessionRecord | undefined {
     const session = this.sessions.get(sessionId);
     if (!session) {
       return undefined;
@@ -82,6 +89,8 @@ export class SessionStore {
   }
 
   listByUser(userId: string): SessionRecord[] {
-    return [...this.sessions.values()].filter((session) => session.userId === userId);
+    return [...this.sessions.values()].filter(
+      (session) => session.userId === userId,
+    );
   }
 }

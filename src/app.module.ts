@@ -15,7 +15,13 @@ import { SubmissionsModule } from './submissions/submissions.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [CommonModule, AuthModule, UsersModule, CoursesModule, SubmissionsModule],
+  imports: [
+    CommonModule,
+    AuthModule,
+    UsersModule,
+    CoursesModule,
+    SubmissionsModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

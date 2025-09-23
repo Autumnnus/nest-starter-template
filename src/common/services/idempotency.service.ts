@@ -24,7 +24,12 @@ export class IdempotencyService {
     this.ttlMs = options?.ttlMs ?? 24 * 60 * 60 * 1000;
   }
 
-  buildCacheKey(params: { idempotencyKey: string; method: string; url: string; userId?: string }): string {
+  buildCacheKey(params: {
+    idempotencyKey: string;
+    method: string;
+    url: string;
+    userId?: string;
+  }): string {
     const hash = createHash('sha256');
     hash.update(params.idempotencyKey);
     hash.update('|');
@@ -50,7 +55,12 @@ export class IdempotencyService {
     return record;
   }
 
-  save(cacheKey: string, statusCode: number, body: unknown, headers: Record<string, string | string[]>): IdempotencyRecord {
+  save(
+    cacheKey: string,
+    statusCode: number,
+    body: unknown,
+    headers: Record<string, string | string[]>,
+  ): IdempotencyRecord {
     const expiresAt = Date.now() + this.ttlMs;
     const record: IdempotencyRecord = {
       id: randomUUID(),

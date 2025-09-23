@@ -8,23 +8,30 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import {
+  ApiError,
+  AuthenticatedUser,
+} from 'src/auth/interfaces/authenticated-user.interface';
 import { IDEMPOTENCY_REQUIRED_KEY } from '../decorators/idempotent.decorator';
 import { IdempotencyService } from '../services/idempotency.service';
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
-  constructor(private readonly reflector: Reflector, private readonly service: IdempotencyService) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly service: IdempotencyService,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp();
-    const request = http.getRequest();
-    const response = http.getResponse();
+    const request = http.getRequest<AuthenticatedUser>();
+    const response = http.getResponse<ApiError>();
 
     const method = request.method.toUpperCase();
-    const requiresIdempotency = this.reflector.getAllAndOverride<boolean>(IDEMPOTENCY_REQUIRED_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiresIdempotency = this.reflector.getAllAndOverride<boolean>(
+      IDEMPOTENCY_REQUIRED_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
@@ -33,7 +40,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     const headerValue = request.headers['idempotency-key'];
-    const idempotencyKey = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+    const idempotencyKey = Array.isArray(headerValue)
+      ? headerValue[0]
+      : headerValue;
 
     if (requiresIdempotency && !idempotencyKey) {
       throw new BadRequestException({
@@ -63,7 +72,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
         if (Array.isArray(value)) {
           response.setHeader(header, value);
         } else {
-          response.setHeader(header, value as string);
+          response.setHeader(header, value);
         }
       });
       response.setHeader('X-Idempotent-Replay', 'true');
@@ -81,7 +90,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
             simplifiedHeaders[header] = value as string | string[];
           }
         });
-        this.service.save(cacheKey, response.statusCode, body, simplifiedHeaders);
+        this.service.save(
+          cacheKey,
+          response.statusCode,
+          body,
+          simplifiedHeaders,
+        );
         response.setHeader('X-Idempotent-Replay', 'false');
       }),
     );

@@ -1,10 +1,22 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
 import { AuditService } from '../common/services/audit.service';
-import { paginateArray, PaginatedResult } from '../common/utils/pagination.util';
+import {
+  paginateArray,
+  PaginatedResult,
+} from '../common/utils/pagination.util';
 import { CourseQuery } from './dto/course-query.dto';
 import { CreateCourseRequest } from './dto/create-course.dto';
-import { CourseDetail, CourseLesson, CourseRecord, CourseSummary } from './interfaces/course.interface';
+import {
+  CourseDetail,
+  CourseLesson,
+  CourseRecord,
+  CourseSummary,
+} from './interfaces/course.interface';
 
 @Injectable()
 export class CoursesService {
@@ -12,7 +24,8 @@ export class CoursesService {
     {
       id: 'course-nest-fundamentals',
       title: 'NestJS Fundamentals',
-      description: 'Learn how to build reliable services with NestJS and TypeScript.',
+      description:
+        'Learn how to build reliable services with NestJS and TypeScript.',
       tags: ['nestjs', 'backend', 'typescript'],
       instructorId: 'user-instructor',
       startsAt: '2024-02-01T09:00:00.000Z',
@@ -20,9 +33,24 @@ export class CoursesService {
       createdAt: '2023-12-15T10:00:00.000Z',
       updatedAt: '2024-01-20T12:00:00.000Z',
       lessons: [
-        { id: 'lesson-1', title: 'Project setup and architecture', order: 1, durationMinutes: 45 },
-        { id: 'lesson-2', title: 'Dependency injection and modules', order: 2, durationMinutes: 50 },
-        { id: 'lesson-3', title: 'Building RESTful controllers', order: 3, durationMinutes: 55 },
+        {
+          id: 'lesson-1',
+          title: 'Project setup and architecture',
+          order: 1,
+          durationMinutes: 45,
+        },
+        {
+          id: 'lesson-2',
+          title: 'Dependency injection and modules',
+          order: 2,
+          durationMinutes: 50,
+        },
+        {
+          id: 'lesson-3',
+          title: 'Building RESTful controllers',
+          order: 3,
+          durationMinutes: 55,
+        },
       ],
       enrollment: {
         capacity: 40,
@@ -33,7 +61,8 @@ export class CoursesService {
     {
       id: 'course-event-driven',
       title: 'Event-Driven Microservices',
-      description: 'Design resilient microservices with message-driven patterns.',
+      description:
+        'Design resilient microservices with message-driven patterns.',
       tags: ['microservices', 'event-driven'],
       instructorId: 'user-instructor',
       startsAt: '2024-04-05T09:00:00.000Z',
@@ -41,9 +70,24 @@ export class CoursesService {
       createdAt: '2024-01-10T11:00:00.000Z',
       updatedAt: '2024-01-25T09:30:00.000Z',
       lessons: [
-        { id: 'lesson-1', title: 'Domain events and integration events', order: 1, durationMinutes: 60 },
-        { id: 'lesson-2', title: 'Implementing outbox pattern', order: 2, durationMinutes: 55 },
-        { id: 'lesson-3', title: 'Scaling consumers and observability', order: 3, durationMinutes: 50 },
+        {
+          id: 'lesson-1',
+          title: 'Domain events and integration events',
+          order: 1,
+          durationMinutes: 60,
+        },
+        {
+          id: 'lesson-2',
+          title: 'Implementing outbox pattern',
+          order: 2,
+          durationMinutes: 55,
+        },
+        {
+          id: 'lesson-3',
+          title: 'Scaling consumers and observability',
+          order: 3,
+          durationMinutes: 50,
+        },
       ],
       enrollment: {
         capacity: 30,
@@ -81,7 +125,10 @@ export class CoursesService {
       return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
     });
 
-    const paginated = paginateArray(sorted, { page: query.page, limit: query.limit });
+    const paginated = paginateArray(sorted, {
+      page: query.page,
+      limit: query.limit,
+    });
 
     return {
       data: paginated.data.map((course) => this.toSummary(course)),
@@ -100,8 +147,13 @@ export class CoursesService {
     return this.toDetail(course);
   }
 
-  createCourse(request: CreateCourseRequest, traceId: string | undefined): CourseDetail {
-    const duplicate = this.courses.find((course) => course.title.toLowerCase() === request.title.toLowerCase());
+  createCourse(
+    request: CreateCourseRequest,
+    traceId: string | undefined,
+  ): CourseDetail {
+    const duplicate = this.courses.find(
+      (course) => course.title.toLowerCase() === request.title.toLowerCase(),
+    );
     if (duplicate) {
       throw new ConflictException({
         code: 'COURSE_ALREADY_EXISTS',

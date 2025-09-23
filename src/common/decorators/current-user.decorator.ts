@@ -3,7 +3,7 @@ import { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.inte
 
 export const CurrentUser = createParamDecorator(
   (_: unknown, context: ExecutionContext): AuthenticatedUser | undefined => {
-    const request = context.switchToHttp().getRequest();
-    return request.user as AuthenticatedUser | undefined;
+    const request = context.switchToHttp().getRequest<AuthenticatedUser>();
+    return request.user;
   },
 );

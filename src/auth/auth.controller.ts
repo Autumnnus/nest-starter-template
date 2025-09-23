@@ -1,13 +1,22 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common';
-import { Request } from 'express';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Idempotent } from '../common/decorators/idempotent.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { RateLimit } from '../common/decorators/rate-limit.decorator';
-import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
-import { AuthService } from './auth.service';
+import { AuthService, SignedTokens } from './auth.service';
 import { validateLoginRequest } from './dto/login.dto';
 import { validateRefreshTokenRequest } from './dto/refresh-token.dto';
+import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
@@ -17,11 +26,14 @@ export class AuthController {
   @Post('login')
   @Idempotent()
   @RateLimit({ limit: 5, windowMs: 60_000 })
-  async login(@Body() body: unknown, @Req() request: Request) {
+  async login(
+    @Body() body: unknown,
+    @Req() request: Request,
+  ): Promise<SignedTokens> {
     const payload = validateLoginRequest(body);
     const tokens = await this.authService.login(payload, request.traceId, {
       ipAddress: request.ip,
-      userAgent: request.headers['user-agent'] as string | undefined,
+      userAgent: request.headers['user-agent'],
     });
     return tokens;
   }
@@ -36,14 +48,18 @@ export class AuthController {
   }
 
   @Get('sessions')
-  async sessions(@CurrentUser() user: AuthenticatedUser) {
+  sessions(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.listSessions(user.id);
   }
 
   @Delete('sessions/:sessionId')
   @Idempotent()
   @RateLimit({ limit: 30, windowMs: 60_000 })
-  async revokeSession(@CurrentUser() user: AuthenticatedUser, @Param('sessionId') sessionId: string, @Req() request: Request) {
+  revokeSession(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('sessionId') sessionId: string,
+    @Req() request: Request,
+  ) {
     if (!sessionId) {
       throw new BadRequestException({
         code: 'SESSION_ID_REQUIRED',

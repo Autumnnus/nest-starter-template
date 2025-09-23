@@ -6,6 +6,10 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import {
+  ApiError,
+  AuthenticatedUser,
+} from 'src/auth/interfaces/authenticated-user.interface';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -13,8 +17,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
-    const request = ctx.getRequest();
+    const response = ctx.getResponse<ApiError>();
+    const request = ctx.getRequest<AuthenticatedUser>();
 
     const traceId: string = request.traceId ?? 'unknown-trace';
 
@@ -28,11 +32,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const { code: responseCode, message: responseMessage, details: responseDetails } = exceptionResponse as Record<
-          string,
-          unknown
-        >;
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
+        const {
+          code: responseCode,
+          message: responseMessage,
+          details: responseDetails,
+        } = exceptionResponse as Record<string, unknown>;
         if (typeof responseMessage === 'string') {
           message = responseMessage;
         }
@@ -53,7 +61,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       code = this.mapStatusToCode(status);
     }
 
-    this.logger.error(`${code} ${message}`, exception instanceof Error ? exception.stack : undefined);
+    this.logger.error(
+      `${code} ${message}`,
+      exception instanceof Error ? exception.stack : undefined,
+    );
 
     response.status(status).json({
       error: {
@@ -65,7 +76,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     });
   }
 
-  private mapStatusToCode(status: number): string {
+  private mapStatusToCode(status: HttpStatus): string {
     switch (status) {
       case HttpStatus.BAD_REQUEST:
         return 'BAD_REQUEST';

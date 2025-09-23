@@ -5,12 +5,16 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { AuthService } from '../../auth/auth.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector, private readonly authService: AuthService) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly authService: AuthService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -22,7 +26,7 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedUser>();
     const authHeader = request.headers.authorization;
 
     if (!authHeader || typeof authHeader !== 'string') {
@@ -41,7 +45,7 @@ export class AuthGuard implements CanActivate {
     }
 
     const user = await this.authService.verifyAccessToken(token);
-    request.user = user;
+    request.user = user as AuthenticatedUser;
     return true;
   }
 }

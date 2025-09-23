@@ -11,7 +11,10 @@ export class ValidationException extends BadRequestException {
 }
 
 export class Validator {
-  static ensureObject(payload: unknown, errors: string[]): Record<string, unknown> {
+  static ensureObject(
+    payload: unknown,
+    errors: string[],
+  ): Record<string, unknown> {
     if (!payload || typeof payload !== 'object') {
       errors.push('Payload must be a JSON object.');
       return {};
@@ -88,13 +91,21 @@ export class Validator {
     if (options.pattern && !options.pattern.test(value)) {
       errors.push(`${field} has an invalid format.`);
     }
-    if (options.format === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    if (
+      options.format === 'email' &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+    ) {
       errors.push(`${field} must be a valid email address.`);
     }
     if (options.format === 'iso-date' && Number.isNaN(Date.parse(value))) {
       errors.push(`${field} must be a valid ISO 8601 date.`);
     }
-    if (options.format === 'uuid' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    if (
+      options.format === 'uuid' &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        value,
+      )
+    ) {
       errors.push(`${field} must be a valid UUID.`);
     }
     return value;
@@ -113,12 +124,14 @@ export class Validator {
       errors.push(`${field} must be an array of strings when provided.`);
       return undefined;
     }
-    const invalid = value.filter((item) => typeof item !== 'string' || item.trim().length === 0);
+    const invalid = value.filter(
+      (item) => typeof item !== 'string' || item.trim().length === 0,
+    );
     if (invalid.length > 0) {
       errors.push(`${field} must only include non-empty strings.`);
       return undefined;
     }
-    return value.map((item) => item.trim());
+    return value.map((item: string) => item.trim());
   }
 
   static optionalNumber(
@@ -148,7 +161,11 @@ export class Validator {
     return numeric;
   }
 
-  static optionalBoolean(source: Record<string, unknown>, field: string, errors: string[]): boolean | undefined {
+  static optionalBoolean(
+    source: Record<string, unknown>,
+    field: string,
+    errors: string[],
+  ): boolean | undefined {
     const value = source[field];
     if (value === undefined || value === null || value === '') {
       return undefined;
@@ -171,7 +188,9 @@ export class Validator {
     field: string,
     errors: string[],
   ): Date {
-    const value = this.requiredString(source, field, errors, { format: 'iso-date' });
+    const value = this.requiredString(source, field, errors, {
+      format: 'iso-date',
+    });
     if (!value) {
       return new Date(0);
     }
@@ -183,7 +202,9 @@ export class Validator {
     field: string,
     errors: string[],
   ): Date | undefined {
-    const value = this.optionalString(source, field, errors, { format: 'iso-date' });
+    const value = this.optionalString(source, field, errors, {
+      format: 'iso-date',
+    });
     if (!value) {
       return undefined;
     }

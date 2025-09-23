@@ -3,25 +3,35 @@ import { randomUUID } from 'crypto';
 import { AuditService } from '../common/services/audit.service';
 import { CoursesService } from '../courses/courses.service';
 import { CreateSubmissionRequest } from './dto/create-submission.dto';
-import { OutboxEvent, SubmissionRecord } from './interfaces/submission.interface';
+import {
+  OutboxEvent,
+  SubmissionRecord,
+} from './interfaces/submission.interface';
 
 @Injectable()
 export class SubmissionsService {
   private readonly submissions: SubmissionRecord[] = [];
   private readonly outbox: OutboxEvent[] = [];
 
-  constructor(private readonly coursesService: CoursesService, private readonly auditService: AuditService) {}
+  constructor(
+    private readonly coursesService: CoursesService,
+    private readonly auditService: AuditService,
+  ) {}
 
   createSubmission(
     userId: string,
     request: CreateSubmissionRequest,
     traceId: string | undefined,
   ): SubmissionRecord {
-    const enrolled = this.coursesService.isUserEnrolled(request.courseId, userId);
+    const enrolled = this.coursesService.isUserEnrolled(
+      request.courseId,
+      userId,
+    );
     if (!enrolled) {
       throw new ForbiddenException({
         code: 'COURSE_ENROLLMENT_REQUIRED',
-        message: 'You must be enrolled in the course to submit this assignment.',
+        message:
+          'You must be enrolled in the course to submit this assignment.',
       });
     }
 
