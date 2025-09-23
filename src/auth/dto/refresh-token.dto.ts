@@ -1,7 +1,7 @@
 import {
   ValidationException,
   Validator,
-} from '../../common/utils/validation.util';
+} from 'src/common/utils/validation.util';
 
 export interface RefreshTokenRequest {
   refreshToken: string;

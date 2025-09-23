@@ -8,16 +8,17 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { Idempotent } from 'src/common/decorators/idempotent.decorator';
+import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/types/role.enum';
+import { validateListUsersQuery } from 'src/users/dto/list-users.dto';
+import { validateUpdateUserRequest } from 'src/users/dto/update-user.dto';
+import { UsersService } from 'src/users/users.service';
+
 import type { Request } from 'express';
-import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Idempotent } from '../common/decorators/idempotent.decorator';
-import { RateLimit } from '../common/decorators/rate-limit.decorator';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '../common/types/role.enum';
-import { validateListUsersQuery } from './dto/list-users.dto';
-import { validateUpdateUserRequest } from './dto/update-user.dto';
-import { UsersService } from './users.service';
+import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller({ path: 'users', version: '1' })
 export class UsersController {
@@ -45,6 +46,7 @@ export class UsersController {
         message: 'You are not allowed to view this profile.',
       });
     }
+
     return this.usersService.findById(userId);
   }
 
@@ -66,6 +68,7 @@ export class UsersController {
           'You can only update your own profile unless you are an administrator.',
       });
     }
+
     const updateRequest = validateUpdateUserRequest(body);
     return this.usersService.updateUser(userId, updateRequest, request.traceId);
   }

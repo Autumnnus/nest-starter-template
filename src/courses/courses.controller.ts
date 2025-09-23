@@ -10,14 +10,15 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
+import { Idempotent } from 'src/common/decorators/idempotent.decorator';
+import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/types/role.enum';
+import { CoursesService } from 'src/courses/courses.service';
+import { validateCourseQuery } from 'src/courses/dto/course-query.dto';
+import { validateCreateCourseRequest } from 'src/courses/dto/create-course.dto';
+
 import type { Request, Response } from 'express';
-import { Idempotent } from '../common/decorators/idempotent.decorator';
-import { RateLimit } from '../common/decorators/rate-limit.decorator';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '../common/types/role.enum';
-import { CoursesService } from './courses.service';
-import { validateCourseQuery } from './dto/course-query.dto';
-import { validateCreateCourseRequest } from './dto/create-course.dto';
 
 @Controller({ path: 'courses', version: '1' })
 export class CoursesController {
@@ -47,6 +48,7 @@ export class CoursesController {
       response.status(304);
       return;
     }
+
     response.setHeader('ETag', quotedEtag);
     response.setHeader('Last-Modified', course.updatedAt);
     response.setHeader('Cache-Control', 'public, max-age=600');

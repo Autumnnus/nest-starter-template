@@ -8,14 +8,15 @@ import {
   Req,
 } from '@nestjs/common';
 import { type Request } from 'express';
-import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Idempotent } from '../common/decorators/idempotent.decorator';
-import { RateLimit } from '../common/decorators/rate-limit.decorator';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '../common/types/role.enum';
-import { validateCreateSubmissionRequest } from './dto/create-submission.dto';
-import { SubmissionsService } from './submissions.service';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { Idempotent } from 'src/common/decorators/idempotent.decorator';
+import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/common/types/role.enum';
+import { validateCreateSubmissionRequest } from 'src/submissions/dto/create-submission.dto';
+import { SubmissionsService } from 'src/submissions/submissions.service';
+
+import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller({ path: 'submissions', version: '1' })
 export class SubmissionsController {

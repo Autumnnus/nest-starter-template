@@ -4,19 +4,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
-import { AuditService } from '../common/services/audit.service';
+import { AuditService } from 'src/common/services/audit.service';
 import {
   paginateArray,
   PaginatedResult,
-} from '../common/utils/pagination.util';
-import { CourseQuery } from './dto/course-query.dto';
-import { CreateCourseRequest } from './dto/create-course.dto';
+} from 'src/common/utils/pagination.util';
+import { CourseQuery } from 'src/courses/dto/course-query.dto';
+import { CreateCourseRequest } from 'src/courses/dto/create-course.dto';
 import {
   CourseDetail,
   CourseLesson,
   CourseRecord,
   CourseSummary,
-} from './interfaces/course.interface';
+} from 'src/courses/interfaces/course.interface';
 
 @Injectable()
 export class CoursesService {
@@ -104,9 +104,11 @@ export class CoursesService {
       if (query.tag && !course.tags.includes(query.tag)) {
         return false;
       }
+
       if (query.instructorId && course.instructorId !== query.instructorId) {
         return false;
       }
+
       if (query.search) {
         const normalized = query.search.toLowerCase();
         return (
@@ -115,6 +117,7 @@ export class CoursesService {
           course.tags.some((tag) => tag.toLowerCase().includes(normalized))
         );
       }
+
       return true;
     });
 
@@ -122,6 +125,7 @@ export class CoursesService {
       if (query.sort === 'title') {
         return a.title.localeCompare(b.title);
       }
+
       return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
     });
 
@@ -144,6 +148,7 @@ export class CoursesService {
         message: 'Course not found.',
       });
     }
+
     return this.toDetail(course);
   }
 
@@ -206,6 +211,7 @@ export class CoursesService {
     if (!course) {
       return false;
     }
+
     return course.enrollment.enrolledUserIds.includes(userId);
   }
 

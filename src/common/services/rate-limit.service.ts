@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RateLimitOptions } from '../decorators/rate-limit.decorator';
+import { RateLimitOptions } from 'src/common/decorators/rate-limit.decorator';
 
 interface TokenBucket {
   tokens: number;

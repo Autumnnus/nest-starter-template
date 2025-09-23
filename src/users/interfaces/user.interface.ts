@@ -1,4 +1,4 @@
-import { Role } from '../../common/types/role.enum';
+import { type Role } from 'src/common/types/role.enum';
 
 export interface UserProfile {
   displayName: string;

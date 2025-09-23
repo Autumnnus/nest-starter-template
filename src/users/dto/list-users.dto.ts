@@ -1,8 +1,8 @@
-import { Role } from '../../common/types/role.enum';
+import { Role } from 'src/common/types/role.enum';
 import {
   ValidationException,
   Validator,
-} from '../../common/utils/validation.util';
+} from 'src/common/utils/validation.util';
 
 export interface ListUsersQuery {
   role?: Role;
@@ -25,6 +25,7 @@ export function validateListUsersQuery(
       role = roleInput as Role;
     }
   }
+
   const search = Validator.optionalString(source, 'search', errors, {
     maxLength: 120,
   });

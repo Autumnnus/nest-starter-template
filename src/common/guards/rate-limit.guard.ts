@@ -5,7 +5,6 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-
 import {
   ApiError,
   AuthenticatedUser,
@@ -13,8 +12,8 @@ import {
 import {
   RATE_LIMIT_OPTIONS_KEY,
   RateLimitOptions,
-} from '../decorators/rate-limit.decorator';
-import { RateLimitService } from '../services/rate-limit.service';
+} from 'src/common/decorators/rate-limit.decorator';
+import { RateLimitService } from 'src/common/services/rate-limit.service';
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {

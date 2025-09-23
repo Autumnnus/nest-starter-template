@@ -1,17 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AuditService } from '../common/services/audit.service';
-import { Role } from '../common/types/role.enum';
+import { AuditService } from 'src/common/services/audit.service';
+import { Role } from 'src/common/types/role.enum';
 import {
   paginateArray,
   PaginatedResult,
-} from '../common/utils/pagination.util';
-import { ListUsersQuery } from './dto/list-users.dto';
-import { UpdateUserRequest } from './dto/update-user.dto';
+} from 'src/common/utils/pagination.util';
+import { ListUsersQuery } from 'src/users/dto/list-users.dto';
+import { UpdateUserRequest } from 'src/users/dto/update-user.dto';
 import {
   PublicUser,
   UserProfile,
   UserRecord,
-} from './interfaces/user.interface';
+} from 'src/users/interfaces/user.interface';
 
 @Injectable()
 export class UsersService {
@@ -64,6 +64,7 @@ export class UsersService {
       if (query.role && !user.roles.includes(query.role)) {
         return false;
       }
+
       if (query.search) {
         const normalized = query.search.toLowerCase();
         return (
@@ -71,6 +72,7 @@ export class UsersService {
           user.profile.displayName.toLowerCase().includes(normalized)
         );
       }
+
       return true;
     });
 
@@ -94,6 +96,7 @@ export class UsersService {
         message: 'User could not be found.',
       });
     }
+
     return this.toPublicUser(record);
   }
 

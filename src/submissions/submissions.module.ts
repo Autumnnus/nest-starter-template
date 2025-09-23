@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { CommonModule } from '../common/common.module';
-import { CoursesModule } from '../courses/courses.module';
-import { SubmissionsController } from './submissions.controller';
-import { SubmissionsService } from './submissions.service';
+import { CommonModule } from 'src/common/common.module';
+import { CoursesModule } from 'src/courses/courses.module';
+import { SubmissionsController } from 'src/submissions/submissions.controller';
+import { SubmissionsService } from 'src/submissions/submissions.service';
 
 @Module({
   imports: [CommonModule, CoursesModule],

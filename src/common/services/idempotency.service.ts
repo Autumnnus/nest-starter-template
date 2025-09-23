@@ -43,6 +43,7 @@ export class IdempotencyService {
       hash.update('|');
       hash.update(params.userId);
     }
+
     return hash.digest('hex');
   }
 
@@ -51,10 +52,12 @@ export class IdempotencyService {
     if (!record) {
       return undefined;
     }
+
     if (record.expiresAt <= Date.now()) {
       this.store.delete(cacheKey);
       return undefined;
     }
+
     return record;
   }
 

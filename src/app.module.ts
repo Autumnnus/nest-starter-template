@@ -1,18 +1,18 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { AuthModule } from './auth/auth.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { CommonModule } from './common/common.module';
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import { AuthGuard } from './common/guards/auth.guard';
-import { RateLimitGuard } from './common/guards/rate-limit.guard';
-import { RolesGuard } from './common/guards/roles.guard';
-import { IdempotencyInterceptor } from './common/interceptors/idempotency.interceptor';
-import { TraceIdMiddleware } from './common/middleware/trace-id.middleware';
-import { CoursesModule } from './courses/courses.module';
-import { SubmissionsModule } from './submissions/submissions.module';
-import { UsersModule } from './users/users.module';
+import { AppController } from 'src/app.controller';
+import { AppService } from 'src/app.service';
+import { AuthModule } from 'src/auth/auth.module';
+import { CommonModule } from 'src/common/common.module';
+import { GlobalExceptionFilter } from 'src/common/filters/global-exception.filter';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RateLimitGuard } from 'src/common/guards/rate-limit.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.interceptor';
+import { TraceIdMiddleware } from 'src/common/middleware/trace-id.middleware';
+import { CoursesModule } from 'src/courses/courses.module';
+import { SubmissionsModule } from 'src/submissions/submissions.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [

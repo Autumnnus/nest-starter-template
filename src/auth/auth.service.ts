@@ -6,12 +6,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHmac } from 'crypto';
+import { LoginRequest } from 'src/auth/dto/login.dto';
+import { RefreshTokenRequest } from 'src/auth/dto/refresh-token.dto';
+import { SessionRecord, SessionStore } from 'src/auth/session.store';
+import { AuditService } from 'src/common/services/audit.service';
 import { Role } from 'src/common/types/role.enum';
-import { AuditService } from '../common/services/audit.service';
-import { UsersService } from '../users/users.service';
-import { LoginRequest } from './dto/login.dto';
-import { RefreshTokenRequest } from './dto/refresh-token.dto';
-import { SessionRecord, SessionStore } from './session.store';
+import { UsersService } from 'src/users/users.service';
 
 interface JwtPayload {
   sub: string;
@@ -205,6 +205,7 @@ export class AuthService {
         message: 'Session could not be found for the user.',
       });
     }
+
     this.sessionStore.revoke(sessionId);
     this.auditService.record('auth.session.revoked', {
       userId,
@@ -298,6 +299,7 @@ export class AuthService {
     if (a.length !== b.length) {
       return false;
     }
+
     let mismatch = 0;
     for (let i = 0; i < a.length; i += 1) {
       mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);

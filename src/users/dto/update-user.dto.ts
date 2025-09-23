@@ -1,8 +1,8 @@
 import {
   ValidationException,
   Validator,
-} from '../../common/utils/validation.util';
-import { UserProfile } from '../interfaces/user.interface';
+} from 'src/common/utils/validation.util';
+import { type UserProfile } from 'src/users/interfaces/user.interface';
 
 export interface UpdateUserRequest {
   profile: Partial<UserProfile>;
@@ -39,9 +39,11 @@ export function validateUpdateUserRequest(payload: unknown): UpdateUserRequest {
   if (displayName !== undefined) {
     profile.displayName = displayName;
   }
+
   if (locale !== undefined) {
     profile.locale = locale;
   }
+
   if (bio !== undefined) {
     profile.bio = bio;
   }

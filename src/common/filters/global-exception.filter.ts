@@ -44,11 +44,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         if (typeof responseMessage === 'string') {
           message = responseMessage;
         }
+
         if (typeof responseCode === 'string') {
           code = responseCode;
         } else {
           code = this.mapStatusToCode(status);
         }
+
         if (responseDetails !== undefined) {
           details = responseDetails;
         }

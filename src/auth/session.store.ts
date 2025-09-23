@@ -50,6 +50,7 @@ export class SessionStore {
     if (!sessionId) {
       return undefined;
     }
+
     return this.sessions.get(sessionId);
   }
 
@@ -61,6 +62,7 @@ export class SessionStore {
     if (!session) {
       return undefined;
     }
+
     this.refreshTokenIndex.delete(session.refreshToken);
     const newToken = randomBytes(48).toString('hex');
     session.refreshToken = newToken;
@@ -75,6 +77,7 @@ export class SessionStore {
     if (!session) {
       return undefined;
     }
+
     session.lastAccessedAt = new Date().toISOString();
     return session;
   }
@@ -84,6 +87,7 @@ export class SessionStore {
     if (!session) {
       return;
     }
+
     this.sessions.delete(sessionId);
     this.refreshTokenIndex.delete(session.refreshToken);
   }

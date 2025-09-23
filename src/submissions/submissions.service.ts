@@ -1,12 +1,12 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { AuditService } from '../common/services/audit.service';
-import { CoursesService } from '../courses/courses.service';
-import { CreateSubmissionRequest } from './dto/create-submission.dto';
+import { AuditService } from 'src/common/services/audit.service';
+import { CoursesService } from 'src/courses/courses.service';
+import { CreateSubmissionRequest } from 'src/submissions/dto/create-submission.dto';
 import {
   OutboxEvent,
   SubmissionRecord,
-} from './interfaces/submission.interface';
+} from 'src/submissions/interfaces/submission.interface';
 
 @Injectable()
 export class SubmissionsService {

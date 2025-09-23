@@ -12,8 +12,8 @@ import {
   ApiError,
   AuthenticatedUser,
 } from 'src/auth/interfaces/authenticated-user.interface';
-import { IDEMPOTENCY_REQUIRED_KEY } from '../decorators/idempotent.decorator';
-import { IdempotencyService } from '../services/idempotency.service';
+import { IDEMPOTENCY_REQUIRED_KEY } from 'src/common/decorators/idempotent.decorator';
+import { IdempotencyService } from 'src/common/services/idempotency.service';
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
@@ -69,6 +69,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
         if (header.toLowerCase() === 'content-length') {
           return;
         }
+
         if (Array.isArray(value)) {
           response.setHeader(header, value);
         } else {

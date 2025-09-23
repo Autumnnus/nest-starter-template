@@ -1,7 +1,7 @@
 import {
   ValidationException,
   Validator,
-} from '../../common/utils/validation.util';
+} from 'src/common/utils/validation.util';
 
 export interface CreateCourseLessonInput {
   title: string;
@@ -59,6 +59,7 @@ export function validateCreateCourseRequest(
         errors.push(`lessons[${index}] must be an object.`);
         return;
       }
+
       const lessonRecord = lesson as Record<string, unknown>;
       const lessonTitle = Validator.requiredString(
         lessonRecord,
@@ -79,6 +80,7 @@ export function validateCreateCourseRequest(
         errors.push(`lessons[${index}].durationMinutes is required.`);
         return;
       }
+
       lessons.push({ title: lessonTitle, durationMinutes: duration });
     });
   }

@@ -38,6 +38,7 @@ export function validateCourseQuery(
       sortValue = sort;
     }
   }
+
   const page =
     Validator.optionalNumber(source, 'page', errors, {
       min: 1,

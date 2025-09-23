@@ -1,6 +1,6 @@
 import { Controller, Get, Req } from '@nestjs/common';
 import { type Request } from 'express';
-import { AppService } from './app.service';
+import { AppService } from 'src/app.service';
 
 @Controller({ path: 'health', version: '1' })
 export class AppController {

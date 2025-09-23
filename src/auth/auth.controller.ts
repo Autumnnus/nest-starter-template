@@ -8,15 +8,16 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
+import { AuthService, SignedTokens } from 'src/auth/auth.service';
+import { validateLoginRequest } from 'src/auth/dto/login.dto';
+import { validateRefreshTokenRequest } from 'src/auth/dto/refresh-token.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { Idempotent } from 'src/common/decorators/idempotent.decorator';
+import { Public } from 'src/common/decorators/public.decorator';
+import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
+
 import type { Request } from 'express';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Idempotent } from '../common/decorators/idempotent.decorator';
-import { Public } from '../common/decorators/public.decorator';
-import { RateLimit } from '../common/decorators/rate-limit.decorator';
-import { AuthService, SignedTokens } from './auth.service';
-import { validateLoginRequest } from './dto/login.dto';
-import { validateRefreshTokenRequest } from './dto/refresh-token.dto';
-import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
@@ -66,6 +67,7 @@ export class AuthController {
         message: 'sessionId is required.',
       });
     }
+
     this.authService.revokeSession(user.id, sessionId, request.traceId);
     return { status: 'revoked', sessionId };
   }

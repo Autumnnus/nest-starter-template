@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { Role } from '../../common/types/role.enum';
+import type { Role } from 'src/common/types/role.enum';
 
 export interface AuthenticatedUser extends Request {
   id: string;
