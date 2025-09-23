@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
+import { IDEMPOTENCY_OPTIONS } from 'src/common/constants/idempotency.constant';
 
 interface IdempotencyRecord {
   id: string;
@@ -20,7 +21,9 @@ export class IdempotencyService {
   private readonly store = new Map<string, IdempotencyRecord>();
   private readonly ttlMs: number;
 
-  constructor(options?: IdempotencyOptions) {
+  constructor(
+    @Optional() @Inject(IDEMPOTENCY_OPTIONS) options?: IdempotencyOptions,
+  ) {
     this.ttlMs = options?.ttlMs ?? 24 * 60 * 60 * 1000;
   }
 

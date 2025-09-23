@@ -33,7 +33,7 @@ export class AuditService {
     };
     this.records.push(entry);
     this.logger.log(
-      `${event} ${JSON.stringify({ userId: entry.userId, traceId: entry.traceId })}`,
+      `AUDIT: ${event} ${JSON.stringify({ userId: entry.userId, traceId: entry.traceId })}`,
     );
   }
 
