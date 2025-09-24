@@ -1,32 +1,45 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
-  ValidationException,
-  Validator,
-} from 'src/common/utils/validation.util';
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
-export interface LoginRequest {
-  email: string;
-  password: string;
+export class LoginDto {
+  @ApiProperty({
+    example: 'johndoe@example.com',
+    description: 'Kullanıcı e-postası',
+  })
+  @IsEmail()
+  @Transform(({ value }) => String(value).trim().toLowerCase())
+  email!: string;
+
+  @ApiProperty({
+    example: '123123',
+    description: 'Kullanıcı şifresi',
+  })
+  @IsString()
+  @MinLength(6)
+  password!: string;
+
+  @ApiPropertyOptional({
+    example: 'ios-uuid-123',
+    description: 'Cihaz benzersiz kimliği',
+  })
+  @IsOptional()
+  @IsString()
   deviceId?: string;
-  deviceName?: string;
-}
 
-export function validateLoginRequest(payload: unknown): LoginRequest {
-  const errors: string[] = [];
-  const source = Validator.ensureObject(payload, errors);
-  const email = Validator.requiredString(source, 'email', errors, {
-    format: 'email',
-  });
-  const password = Validator.requiredString(source, 'password', errors, {
-    minLength: 6,
-  });
-  const deviceId = Validator.optionalString(source, 'deviceId', errors);
-  const deviceName = Validator.optionalString(source, 'deviceName', errors, {
+  @ApiPropertyOptional({
+    example: 'iPhone 15 Pro',
+    description: 'Cihaz görünür adı',
     maxLength: 120,
-  });
-
-  if (errors.length > 0) {
-    throw new ValidationException(errors);
-  }
-
-  return { email: email.toLowerCase(), password, deviceId, deviceName };
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  deviceName?: string;
 }

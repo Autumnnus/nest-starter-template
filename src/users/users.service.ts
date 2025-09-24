@@ -5,8 +5,8 @@ import {
   paginateArray,
   PaginatedResult,
 } from 'src/common/utils/pagination.util';
-import { ListUsersQuery } from 'src/users/dto/list-users.dto';
-import { UpdateUserRequest } from 'src/users/dto/update-user.dto';
+import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
+import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 import {
   PublicUser,
   UserProfile,
@@ -59,7 +59,7 @@ export class UsersService {
 
   constructor(private readonly auditService: AuditService) {}
 
-  listUsers(query: ListUsersQuery): PaginatedResult<PublicUser> {
+  listUsers(query: ListUsersQueryDto): PaginatedResult<PublicUser> {
     const filtered = this.users.filter((user) => {
       if (query.role && !user.roles.includes(query.role)) {
         return false;
@@ -102,7 +102,7 @@ export class UsersService {
 
   updateUser(
     userId: string,
-    request: UpdateUserRequest,
+    request: UpdateUserDto,
     traceId: string | undefined,
   ): PublicUser {
     const record = this.findUserRecordById(userId);

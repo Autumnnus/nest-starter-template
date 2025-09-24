@@ -5,6 +5,7 @@ export const ROUTES = {
     refresh: 'refresh',
     me: 'me',
     sessions: 'sessions',
+    session: 'sessions/:sessionId',
   },
   users: {
     root: 'users',

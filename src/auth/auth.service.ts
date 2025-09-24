@@ -6,8 +6,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHmac } from 'crypto';
-import { LoginRequest } from 'src/auth/dto/login.dto';
-import { RefreshTokenRequest } from 'src/auth/dto/refresh-token.dto';
+import { LoginDto } from 'src/auth/dto/login.dto';
+import { RefreshTokenDto } from 'src/auth/dto/refresh-token.dto';
 import { SessionRecord, SessionStore } from 'src/auth/session.store';
 import { AuditService } from 'src/common/services/audit.service';
 import { Role } from 'src/common/types/role.enum';
@@ -43,7 +43,7 @@ export class AuthService {
   ) {}
 
   async login(
-    request: LoginRequest,
+    request: LoginDto,
     traceId: string | undefined,
     metadata: { ipAddress?: string; userAgent?: string },
   ): Promise<SignedTokens> {
@@ -86,7 +86,7 @@ export class AuthService {
   }
 
   async refreshTokens(
-    request: RefreshTokenRequest,
+    request: RefreshTokenDto,
     traceId: string | undefined,
   ): Promise<SignedTokens> {
     const session = this.sessionStore.findByRefreshToken(request.refreshToken);

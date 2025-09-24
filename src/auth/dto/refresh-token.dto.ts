@@ -1,27 +1,12 @@
-import {
-  ValidationException,
-  Validator,
-} from 'src/common/utils/validation.util';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, MinLength } from 'class-validator';
 
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
-export function validateRefreshTokenRequest(
-  payload: unknown,
-): RefreshTokenRequest {
-  const errors: string[] = [];
-  const source = Validator.ensureObject(payload, errors);
-  const refreshToken = Validator.requiredString(
-    source,
-    'refreshToken',
-    errors,
-    { minLength: 10 },
-  );
-
-  if (errors.length > 0) {
-    throw new ValidationException(errors);
-  }
-
-  return { refreshToken };
+export class RefreshTokenDto {
+  @ApiProperty({
+    example: 'rt_2fZt...9xA',
+    description: 'Refresh token değeri',
+  })
+  @IsString()
+  @MinLength(10)
+  refreshToken!: string;
 }
