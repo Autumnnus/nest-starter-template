@@ -11,8 +11,6 @@ import { RateLimitGuard } from 'src/common/guards/rate-limit.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.interceptor';
 import { TraceIdMiddleware } from 'src/common/middleware/trace-id.middleware';
-import { CoursesModule } from 'src/courses/courses.module';
-import { SubmissionsModule } from 'src/submissions/submissions.module';
 import { UsersModule } from 'src/users/users.module';
 
 @Module({
@@ -20,8 +18,6 @@ import { UsersModule } from 'src/users/users.module';
     CommonModule,
     AuthModule,
     UsersModule,
-    CoursesModule,
-    SubmissionsModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',

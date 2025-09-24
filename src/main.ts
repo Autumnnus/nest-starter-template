@@ -18,6 +18,15 @@ async function bootstrap() {
     .setVersion('1.0')
     .addTag('Authentication', 'Authentication endpoints')
     .addTag('Nest Starter')
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'Idempotency-Key',
+        in: 'header',
+        description: 'UUID gibi benzersiz anahtar',
+      },
+      'Idempotency',
+    )
     .addBearerAuth(
       {
         type: 'http',
