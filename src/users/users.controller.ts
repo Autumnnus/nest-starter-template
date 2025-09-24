@@ -18,7 +18,7 @@ import { validateUpdateUserRequest } from 'src/users/dto/update-user.dto';
 import { UsersService } from 'src/users/users.service';
 
 import type { Request } from 'express';
-import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import type { IUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller({ path: 'users', version: '1' })
 export class UsersController {
@@ -32,10 +32,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  getUser(
-    @Param('id') userId: string,
-    @CurrentUser() currentUser: AuthenticatedUser,
-  ) {
+  getUser(@Param('id') userId: string, @CurrentUser() currentUser: IUser) {
     const isSelf = currentUser.id === userId;
     const hasPrivilege =
       currentUser.roles.includes(Role.Admin) ||
@@ -55,7 +52,7 @@ export class UsersController {
   @RateLimit({ limit: 30, windowMs: 60_000 })
   updateUser(
     @Param('id') userId: string,
-    @CurrentUser() currentUser: AuthenticatedUser,
+    @CurrentUser() currentUser: IUser,
     @Body() body: unknown,
     @Req() request: Request,
   ) {

@@ -5,10 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import {
-  ApiError,
-  AuthenticatedUser,
-} from 'src/auth/interfaces/authenticated-user.interface';
+import { Request, Response } from 'express';
 import {
   RATE_LIMIT_OPTIONS_KEY,
   RateLimitOptions,
@@ -24,8 +21,8 @@ export class RateLimitGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const http = context.switchToHttp();
-    const request = http.getRequest<AuthenticatedUser>();
-    const response = http.getResponse<ApiError>();
+    const request = http.getRequest<Request>();
+    const response = http.getResponse<Response>();
     const user = request.user;
 
     const options = this.reflector.getAllAndOverride<RateLimitOptions>(

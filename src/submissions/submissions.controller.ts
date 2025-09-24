@@ -16,7 +16,7 @@ import { Role } from 'src/common/types/role.enum';
 import { validateCreateSubmissionRequest } from 'src/submissions/dto/create-submission.dto';
 import { SubmissionsService } from 'src/submissions/submissions.service';
 
-import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import type { IUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller({ path: 'submissions', version: '1' })
 export class SubmissionsController {
@@ -27,7 +27,7 @@ export class SubmissionsController {
   @RateLimit({ limit: 20, windowMs: 60_000 })
   @HttpCode(HttpStatus.CREATED)
   submitAssignment(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentUser() user: IUser,
     @Body() body: unknown,
     @Req() request: Request,
   ) {

@@ -6,8 +6,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthService } from 'src/auth/auth.service';
-import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import { IS_PUBLIC_KEY } from 'src/common/decorators/public.decorator';
+
+import type { Request } from 'express';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -26,7 +27,7 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<AuthenticatedUser>();
+    const request = context.switchToHttp().getRequest<Request>();
     const authHeader = request.headers.authorization;
 
     if (!authHeader || typeof authHeader !== 'string') {
@@ -45,7 +46,7 @@ export class AuthGuard implements CanActivate {
     }
 
     const user = await this.authService.verifyAccessToken(token);
-    request.user = user as AuthenticatedUser;
+    request.user = user;
     return true;
   }
 }

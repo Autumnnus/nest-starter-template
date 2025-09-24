@@ -17,7 +17,7 @@ import { Public } from 'src/common/decorators/public.decorator';
 import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
 
 import type { Request } from 'express';
-import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import type { IUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
@@ -49,7 +49,7 @@ export class AuthController {
   }
 
   @Get('sessions')
-  sessions(@CurrentUser() user: AuthenticatedUser) {
+  sessions(@CurrentUser() user: IUser) {
     return this.authService.listSessions(user.id);
   }
 
@@ -57,7 +57,7 @@ export class AuthController {
   @Idempotent()
   @RateLimit({ limit: 30, windowMs: 60_000 })
   revokeSession(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentUser() user: IUser,
     @Param('sessionId') sessionId: string,
     @Req() request: Request,
   ) {

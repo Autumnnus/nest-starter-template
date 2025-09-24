@@ -8,12 +8,10 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import {
-  ApiError,
-  AuthenticatedUser,
-} from 'src/auth/interfaces/authenticated-user.interface';
 import { IDEMPOTENCY_REQUIRED_KEY } from 'src/common/decorators/idempotent.decorator';
 import { IdempotencyService } from 'src/common/services/idempotency.service';
+
+import type { Request, Response } from 'express';
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
@@ -24,8 +22,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp();
-    const request = http.getRequest<AuthenticatedUser>();
-    const response = http.getResponse<ApiError>();
+    const request = http.getRequest<Request>();
+    const response = http.getResponse<Response>();
 
     const method = request.method.toUpperCase();
     const requiresIdempotency = this.reflector.getAllAndOverride<boolean>(

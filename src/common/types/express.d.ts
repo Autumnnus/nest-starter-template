@@ -1,9 +1,20 @@
-import type { AuthenticatedUser } from 'src/common/interfaces/authenticated-user.interface';
+import type { IUser } from 'src/auth/interfaces/authenticated-user.interface';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthenticatedUser;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: IUser;
+    accessToken?: string;
+    refreshToken?: string;
+    sessionId?: string;
+    traceId?: string;
+  }
+
+  interface Response {
+    error: {
+      code: string;
+      message: string;
+      traceId: string;
+      details?: unknown;
+    };
   }
 }

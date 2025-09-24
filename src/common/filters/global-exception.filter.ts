@@ -6,10 +6,8 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import {
-  ApiError,
-  AuthenticatedUser,
-} from 'src/auth/interfaces/authenticated-user.interface';
+
+import type { Request, Response } from 'express';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -17,8 +15,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse<ApiError>();
-    const request = ctx.getRequest<AuthenticatedUser>();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
     const traceId: string = request.traceId ?? 'unknown-trace';
 
