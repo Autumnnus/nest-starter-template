@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from 'src/app.controller';
 import { AppService } from 'src/app.service';
@@ -21,6 +22,10 @@ import { UsersModule } from 'src/users/users.module';
     UsersModule,
     CoursesModule,
     SubmissionsModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
   ],
   controllers: [AppController],
   providers: [

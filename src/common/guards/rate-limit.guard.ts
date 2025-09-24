@@ -5,12 +5,13 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request, Response } from 'express';
 import {
   RATE_LIMIT_OPTIONS_KEY,
   RateLimitOptions,
 } from 'src/common/decorators/rate-limit.decorator';
 import { RateLimitService } from 'src/common/services/rate-limit.service';
+
+import type { Request, Response } from 'express';
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {

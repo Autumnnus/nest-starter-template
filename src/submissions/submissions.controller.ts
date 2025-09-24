@@ -7,7 +7,6 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import { type Request } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Idempotent } from 'src/common/decorators/idempotent.decorator';
 import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
@@ -16,6 +15,7 @@ import { Role } from 'src/common/types/role.enum';
 import { validateCreateSubmissionRequest } from 'src/submissions/dto/create-submission.dto';
 import { SubmissionsService } from 'src/submissions/submissions.service';
 
+import type { Request } from 'express';
 import type { IUser } from 'src/auth/interfaces/authenticated-user.interface';
 
 @Controller({ path: 'submissions', version: '1' })

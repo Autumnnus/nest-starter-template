@@ -1,4 +1,5 @@
-import { VersioningType } from '@nestjs/common';
+import { Logger, VersioningType } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from 'src/app.module';
@@ -31,7 +32,17 @@ async function bootstrap() {
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
-  await app.listen(process.env.PORT ?? 3000);
+
+  const configService = app.get(ConfigService);
+
+  const port = configService.get<number>('PORT') ?? 3005;
+  await app.listen(port);
+
+  const logger = new Logger('Bootstrap');
+  logger.log(`\x1b[34mServer is running on ${port}\x1b[0m`);
+  logger.log(
+    `\x1b[34mSwagger is running on http://localhost:${port}/api\x1b[0m`,
+  );
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

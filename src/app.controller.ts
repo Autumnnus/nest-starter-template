@@ -1,8 +1,10 @@
 import { Controller, Get, Req } from '@nestjs/common';
-import { type Request } from 'express';
 import { AppService } from 'src/app.service';
+import { ROUTES } from 'src/common/routes';
 
-@Controller({ path: 'health', version: '1' })
+import type { Request } from 'express';
+
+@Controller(ROUTES.health.root)
 export class AppController {
   constructor(private readonly appService: AppService) {}
 

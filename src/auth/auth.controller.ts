@@ -15,16 +15,17 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Idempotent } from 'src/common/decorators/idempotent.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
 import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
+import { ROUTES } from 'src/common/routes';
 
 import type { Request } from 'express';
 import type { IUser } from 'src/auth/interfaces/authenticated-user.interface';
 
-@Controller({ path: 'auth', version: '1' })
+@Controller(ROUTES.auth.root)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @Post('login')
+  @Post(ROUTES.auth.login)
   @Idempotent()
   @RateLimit({ limit: 5, windowMs: 60_000 })
   async login(
@@ -40,7 +41,7 @@ export class AuthController {
   }
 
   @Public()
-  @Post('refresh')
+  @Post(ROUTES.auth.refresh)
   @Idempotent()
   @RateLimit({ limit: 10, windowMs: 60_000 })
   async refresh(@Body() body: unknown, @Req() request: Request) {
@@ -48,12 +49,12 @@ export class AuthController {
     return this.authService.refreshTokens(payload, request.traceId);
   }
 
-  @Get('sessions')
+  @Get(ROUTES.auth.sessions)
   sessions(@CurrentUser() user: IUser) {
     return this.authService.listSessions(user.id);
   }
 
-  @Delete('sessions/:sessionId')
+  @Delete(ROUTES.auth.sessions)
   @Idempotent()
   @RateLimit({ limit: 30, windowMs: 60_000 })
   revokeSession(

@@ -12,6 +12,7 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Idempotent } from 'src/common/decorators/idempotent.decorator';
 import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { ROUTES } from 'src/common/routes';
 import { Role } from 'src/common/types/role.enum';
 import { validateListUsersQuery } from 'src/users/dto/list-users.dto';
 import { validateUpdateUserRequest } from 'src/users/dto/update-user.dto';
@@ -20,7 +21,7 @@ import { UsersService } from 'src/users/users.service';
 import type { Request } from 'express';
 import type { IUser } from 'src/auth/interfaces/authenticated-user.interface';
 
-@Controller({ path: 'users', version: '1' })
+@Controller(ROUTES.users.root)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
