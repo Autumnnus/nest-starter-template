@@ -1,0 +1,1 @@
+export const IDEMPOTENCY_OPTIONS = Symbol('IDEMPOTENCY_OPTIONS');

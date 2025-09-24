@@ -1,10 +1,40 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AppController } from 'src/app.controller';
+import { AppService } from 'src/app.service';
+import { AuthModule } from 'src/auth/auth.module';
+import { CommonModule } from 'src/common/common.module';
+import { GlobalExceptionFilter } from 'src/common/filters/global-exception.filter';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RateLimitGuard } from 'src/common/guards/rate-limit.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.interceptor';
+import { TraceIdMiddleware } from 'src/common/middleware/trace-id.middleware';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
-  imports: [],
+  imports: [
+    CommonModule,
+    AuthModule,
+    UsersModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+  ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TraceIdMiddleware).forRoutes('*');
+  }
+}

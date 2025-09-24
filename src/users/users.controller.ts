@@ -1,0 +1,73 @@
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Query,
+  Req,
+} from '@nestjs/common';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { Idempotent } from 'src/common/decorators/idempotent.decorator';
+import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { ROUTES } from 'src/common/routes';
+import { Role } from 'src/common/types/role.enum';
+import { validateListUsersQuery } from 'src/users/dto/list-users.dto';
+import { validateUpdateUserRequest } from 'src/users/dto/update-user.dto';
+import { UsersService } from 'src/users/users.service';
+
+import type { Request } from 'express';
+import type { IUser } from 'src/auth/interfaces/authenticated-user.interface';
+
+@Controller(ROUTES.users.root)
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Get()
+  @Roles(Role.Admin, Role.Moderator)
+  list(@Query() query: Record<string, unknown>) {
+    const filters = validateListUsersQuery(query);
+    return this.usersService.listUsers(filters);
+  }
+
+  @Get(':id')
+  getUser(@Param('id') userId: string, @CurrentUser() currentUser: IUser) {
+    const isSelf = currentUser.id === userId;
+    const hasPrivilege =
+      currentUser.roles.includes(Role.Admin) ||
+      currentUser.roles.includes(Role.Moderator);
+    if (!isSelf && !hasPrivilege) {
+      throw new ForbiddenException({
+        code: 'ACCESS_DENIED',
+        message: 'You are not allowed to view this profile.',
+      });
+    }
+
+    return this.usersService.findById(userId);
+  }
+
+  @Patch(':id')
+  @Idempotent()
+  @RateLimit({ limit: 30, windowMs: 60_000 })
+  updateUser(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: IUser,
+    @Body() body: unknown,
+    @Req() request: Request,
+  ) {
+    const isSelf = currentUser.id === userId;
+    const isAdmin = currentUser.roles.includes(Role.Admin);
+    if (!isSelf && !isAdmin) {
+      throw new ForbiddenException({
+        code: 'NOT_OWNER_OF_PROFILE',
+        message:
+          'You can only update your own profile unless you are an administrator.',
+      });
+    }
+
+    const updateRequest = validateUpdateUserRequest(body);
+    return this.usersService.updateUser(userId, updateRequest, request.traceId);
+  }
+}
