@@ -1,12 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { randomBytes, randomUUID } from 'crypto';
-
-export interface SessionDeviceInfo {
-  deviceId?: string;
-  deviceName?: string;
-  ipAddress?: string;
-  userAgent?: string;
-}
+import { InjectRepository } from '@nestjs/typeorm';
+import { randomBytes } from 'crypto';
+import { SessionDeviceInfo } from 'src/auth/domain/session.types';
+import { AuthSessionEntity } from 'src/auth/infrastructure/entities/auth-session.entity';
+import { Repository } from 'typeorm';
 
 export interface SessionRecord {
   id: string;
@@ -20,81 +17,99 @@ export interface SessionRecord {
 
 @Injectable()
 export class SessionStore {
-  private readonly sessions = new Map<string, SessionRecord>();
-  private readonly refreshTokenIndex = new Map<string, string>();
+  constructor(
+    @InjectRepository(AuthSessionEntity)
+    private readonly repository: Repository<AuthSessionEntity>,
+  ) {}
 
-  create(
+  async create(
     userId: string,
     ttlMs: number,
     device?: SessionDeviceInfo,
-  ): SessionRecord {
-    const id = randomUUID();
+  ): Promise<SessionRecord> {
     const now = new Date();
-    const refreshToken = randomBytes(48).toString('hex');
-    const record: SessionRecord = {
-      id,
+    const entity = this.repository.create({
       userId,
-      refreshToken,
-      createdAt: now.toISOString(),
-      expiresAt: new Date(now.getTime() + ttlMs).toISOString(),
-      lastAccessedAt: now.toISOString(),
+      refreshToken: randomBytes(48).toString('hex'),
+      expiresAt: new Date(now.getTime() + ttlMs),
+      lastAccessedAt: now,
       device,
-    };
-    this.sessions.set(id, record);
-    this.refreshTokenIndex.set(record.refreshToken, id);
-    return record;
+    });
+
+    const saved = await this.repository.save(entity);
+    return this.toRecord(saved);
   }
 
-  findByRefreshToken(refreshToken: string): SessionRecord | undefined {
-    const sessionId = this.refreshTokenIndex.get(refreshToken);
-    if (!sessionId) {
-      return undefined;
-    }
+  async findByRefreshToken(
+    refreshToken: string,
+  ): Promise<SessionRecord | null> {
+    const entity = await this.repository.findOne({
+      where: { refreshToken },
+    });
 
-    return this.sessions.get(sessionId);
+    return entity ? this.toRecord(entity) : null;
   }
 
-  rotateRefreshToken(
+  async rotateRefreshToken(
     sessionId: string,
     ttlMs: number,
-  ): SessionRecord | undefined {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return undefined;
+  ): Promise<SessionRecord | null> {
+    const entity = await this.repository.findOne({ where: { id: sessionId } });
+    if (!entity) {
+      return null;
     }
 
-    this.refreshTokenIndex.delete(session.refreshToken);
-    const newToken = randomBytes(48).toString('hex');
-    session.refreshToken = newToken;
-    session.expiresAt = new Date(Date.now() + ttlMs).toISOString();
-    session.lastAccessedAt = new Date().toISOString();
-    this.refreshTokenIndex.set(newToken, sessionId);
-    return session;
+    entity.refreshToken = randomBytes(48).toString('hex');
+    entity.expiresAt = new Date(Date.now() + ttlMs);
+    entity.lastAccessedAt = new Date();
+    const saved = await this.repository.save(entity);
+    return this.toRecord(saved);
   }
 
-  touch(sessionId: string): SessionRecord | undefined {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return undefined;
+  async touch(sessionId: string): Promise<SessionRecord | null> {
+    const entity = await this.repository.findOne({ where: { id: sessionId } });
+    if (!entity) {
+      return null;
     }
 
-    session.lastAccessedAt = new Date().toISOString();
-    return session;
+    entity.lastAccessedAt = new Date();
+    const saved = await this.repository.save(entity);
+    return this.toRecord(saved);
   }
 
-  revoke(sessionId: string) {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return;
-    }
-
-    this.sessions.delete(sessionId);
-    this.refreshTokenIndex.delete(session.refreshToken);
+  async revoke(sessionId: string): Promise<void> {
+    await this.repository.delete({ id: sessionId });
   }
 
-  listByUser(userId: string): SessionRecord[] {
-    return [...this.sessions.values()].filter(
-      (session) => session.userId === userId,
-    );
+  async listByUser(userId: string): Promise<SessionRecord[]> {
+    const entities = await this.repository.find({
+      where: { userId },
+      order: { lastAccessedAt: 'DESC' },
+    });
+
+    return entities.map((session) => this.toRecord(session));
+  }
+
+  async findOwnedBy(
+    userId: string,
+    sessionId: string,
+  ): Promise<SessionRecord | null> {
+    const entity = await this.repository.findOne({
+      where: { id: sessionId, userId },
+    });
+
+    return entity ? this.toRecord(entity) : null;
+  }
+
+  private toRecord(entity: AuthSessionEntity): SessionRecord {
+    return {
+      id: entity.id,
+      userId: entity.userId,
+      refreshToken: entity.refreshToken,
+      createdAt: entity.createdAt.toISOString(),
+      expiresAt: entity.expiresAt.toISOString(),
+      lastAccessedAt: entity.lastAccessedAt.toISOString(),
+      device: entity.device,
+    };
   }
 }

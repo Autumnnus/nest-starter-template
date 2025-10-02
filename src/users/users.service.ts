@@ -1,95 +1,57 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import * as argon2 from 'argon2';
 import { AuditService } from 'src/common/services/audit.service';
 import { Role } from 'src/common/types/role.enum';
-import {
-  paginateArray,
-  PaginatedResult,
-} from 'src/common/utils/pagination.util';
+import { PaginatedResult } from 'src/common/utils/pagination.util';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
+import { UserEntity } from 'src/users/infrastructure/entities/user.entity';
+import { UsersRepository } from 'src/users/infrastructure/repositories/users.repository';
 import {
   PublicUser,
   UserProfile,
   UserRecord,
 } from 'src/users/interfaces/user.interface';
 
+interface SeedUserInput {
+  email: string;
+  password: string;
+  roles: Role[];
+  displayName: string;
+  locale: string;
+  bio?: string;
+}
+
 @Injectable()
-export class UsersService {
-  private readonly users: UserRecord[] = [
-    {
-      id: 'user-learner',
-      email: 'learner@example.com',
-      password: 'Learner#123',
-      roles: [Role.User],
-      profile: {
-        displayName: 'Learner One',
-        locale: 'en-US',
-        bio: 'Focused on mastering backend development.',
-      },
-      createdAt: '2024-01-10T09:00:00.000Z',
-      updatedAt: '2024-01-10T09:00:00.000Z',
-    },
-    {
-      id: 'user-instructor',
-      email: 'instructor@example.com',
-      password: 'Instructor#123',
-      roles: [Role.Moderator],
-      profile: {
-        displayName: 'Instructor Jane',
-        locale: 'en-US',
-        bio: 'Teaches advanced NestJS workshops.',
-      },
-      createdAt: '2024-01-05T08:30:00.000Z',
-      updatedAt: '2024-01-05T08:30:00.000Z',
-    },
-    {
-      id: 'user-admin',
-      email: 'admin@example.com',
-      password: 'Admin#123',
-      roles: [Role.Admin],
-      profile: {
-        displayName: 'Platform Admin',
-        locale: 'en-US',
-        bio: 'Ensures operations run smoothly.',
-      },
-      createdAt: '2023-12-30T12:00:00.000Z',
-      updatedAt: '2023-12-30T12:00:00.000Z',
-    },
-  ];
+export class UsersService implements OnModuleInit {
+  constructor(
+    private readonly auditService: AuditService,
+    private readonly usersRepository: UsersRepository,
+  ) {}
 
-  constructor(private readonly auditService: AuditService) {}
+  async onModuleInit(): Promise<void> {
+    await this.seedDefaultUsers();
+  }
 
-  listUsers(query: ListUsersQueryDto): PaginatedResult<PublicUser> {
-    const filtered = this.users.filter((user) => {
-      if (query.role && !user.roles.includes(query.role)) {
-        return false;
-      }
-
-      if (query.search) {
-        const normalized = query.search.toLowerCase();
-        return (
-          user.email.toLowerCase().includes(normalized) ||
-          user.profile.displayName.toLowerCase().includes(normalized)
-        );
-      }
-
-      return true;
-    });
-
-    const sorted = [...filtered].sort((a, b) => a.email.localeCompare(b.email));
-    const paginated = paginateArray(sorted, {
-      page: query.page,
-      limit: query.limit,
-    });
+  async listUsers(
+    query: ListUsersQueryDto,
+  ): Promise<PaginatedResult<PublicUser>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const { items, total } = await this.usersRepository.paginate(query);
 
     return {
-      data: paginated.data.map((user) => this.toPublicUser(user)),
-      pagination: paginated.pagination,
+      data: items.map((user) => this.toPublicUser(user)),
+      pagination: {
+        page,
+        limit,
+        total,
+      },
     };
   }
 
-  findById(userId: string): PublicUser {
-    const record = this.findUserRecordById(userId);
+  async findById(userId: string): Promise<PublicUser> {
+    const record = await this.usersRepository.findById(userId);
     if (!record) {
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
@@ -100,60 +62,128 @@ export class UsersService {
     return this.toPublicUser(record);
   }
 
-  updateUser(
+  async updateUser(
     userId: string,
     request: UpdateUserDto,
     traceId: string | undefined,
-  ): PublicUser {
-    const record = this.findUserRecordById(userId);
+  ): Promise<PublicUser> {
+    const record = await this.usersRepository.updateProfile(
+      userId,
+      request.profile,
+    );
     if (!record) {
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User could not be found.',
       });
     }
-
-    const updatedProfile: UserProfile = {
-      ...record.profile,
-      ...request.profile,
-    };
-
-    const now = new Date().toISOString();
-    record.profile = updatedProfile;
-    record.updatedAt = now;
 
     this.auditService.record('user.profile.updated', {
       userId,
       traceId,
       metadata: {
-        updatedFields: Object.keys(request.profile),
+        updatedFields: Object.keys(request.profile ?? {}),
       },
     });
 
     return this.toPublicUser(record);
   }
 
-  validateCredentials(email: string, password: string): UserRecord | undefined {
+  async validateCredentials(
+    email: string,
+    password: string,
+  ): Promise<UserRecord | null> {
     const normalizedEmail = email.toLowerCase();
-    return this.users.find(
-      (user) =>
-        user.email.toLowerCase() === normalizedEmail &&
-        user.password === password,
-    );
+    const entity = await this.usersRepository.findByEmail(normalizedEmail);
+    if (!entity) {
+      return null;
+    }
+
+    const passwordMatches = await argon2.verify(entity.passwordHash, password);
+    if (!passwordMatches) {
+      return null;
+    }
+
+    return this.toUserRecord(entity);
   }
 
-  findUserRecordById(userId: string): UserRecord | undefined {
-    return this.users.find((user) => user.id === userId);
+  async findUserRecordById(userId: string): Promise<UserRecord | null> {
+    const entity = await this.usersRepository.findById(userId);
+    return entity ? this.toUserRecord(entity) : null;
   }
 
-  private toPublicUser(user: UserRecord): PublicUser {
+  private toPublicUser(user: UserEntity): PublicUser {
     return {
       id: user.id,
       email: user.email,
       roles: [...user.roles],
-      profile: { ...user.profile },
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      profile: this.toProfile(user),
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     };
+  }
+
+  private toUserRecord(user: UserEntity): UserRecord {
+    return this.toPublicUser(user);
+  }
+
+  private toProfile(user: UserEntity): UserProfile {
+    return {
+      displayName: user.displayName,
+      locale: user.locale,
+      bio: user.bio ?? undefined,
+    };
+  }
+
+  private async seedDefaultUsers(): Promise<void> {
+    const shouldSeed = (process.env.DB_SEED ?? 'true') === 'true';
+    if (!shouldSeed) {
+      return;
+    }
+
+    const existing = await this.usersRepository.count();
+    if (existing > 0) {
+      return;
+    }
+
+    const defaults: SeedUserInput[] = [
+      {
+        email: 'learner@example.com',
+        password: 'Learner#123',
+        roles: [Role.User],
+        displayName: 'Learner One',
+        locale: 'en-US',
+        bio: 'Focused on mastering backend development.',
+      },
+      {
+        email: 'instructor@example.com',
+        password: 'Instructor#123',
+        roles: [Role.Moderator],
+        displayName: 'Instructor Jane',
+        locale: 'en-US',
+        bio: 'Teaches advanced NestJS workshops.',
+      },
+      {
+        email: 'admin@example.com',
+        password: 'Admin#123',
+        roles: [Role.Admin],
+        displayName: 'Platform Admin',
+        locale: 'en-US',
+        bio: 'Ensures operations run smoothly.',
+      },
+    ];
+
+    for (const user of defaults) {
+      const entity = this.usersRepository.create({
+        email: user.email.toLowerCase(),
+        passwordHash: await argon2.hash(user.password),
+        roles: user.roles,
+        displayName: user.displayName,
+        locale: user.locale,
+        bio: user.bio ?? null,
+      });
+
+      await this.usersRepository.save(entity);
+    }
   }
 }

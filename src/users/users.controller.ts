@@ -58,7 +58,7 @@ export class UsersController {
       },
     },
   })
-  list(@Query() query: ListUsersQueryDto) {
+  async list(@Query() query: ListUsersQueryDto) {
     return this.usersService.listUsers(query);
   }
 
@@ -76,7 +76,10 @@ export class UsersController {
       },
     },
   })
-  getUser(@Param('id') userId: string, @CurrentUser() currentUser: IUser) {
+  async getUser(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: IUser,
+  ) {
     const isSelf = currentUser.id === userId;
     const hasPrivilege =
       currentUser.roles.includes(Role.Admin) ||
@@ -114,7 +117,7 @@ export class UsersController {
       },
     },
   })
-  updateUser(
+  async updateUser(
     @Param('id') userId: string,
     @CurrentUser() currentUser: IUser,
     @Body() body: UpdateUserDto,
