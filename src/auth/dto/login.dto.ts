@@ -23,6 +23,7 @@ export class LoginDto {
   })
   @IsString()
   @MinLength(6)
+  @MaxLength(64)
   password!: string;
 
   @ApiPropertyOptional({

@@ -1,6 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { AppController } from 'src/app.controller';
 import { AppService } from 'src/app.service';
 import { AuthModule } from 'src/auth/auth.module';
@@ -10,6 +10,7 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 import { RateLimitGuard } from 'src/common/guards/rate-limit.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.interceptor';
+import { AppValidationPipe } from 'src/common/pipes/app-validation.pipe';
 import { TraceIdMiddleware } from 'src/common/middleware/trace-id.middleware';
 import { UsersModule } from 'src/users/users.module';
 
@@ -31,6 +32,7 @@ import { UsersModule } from 'src/users/users.module';
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+    { provide: APP_PIPE, useClass: AppValidationPipe },
   ],
 })
 export class AppModule implements NestModule {
