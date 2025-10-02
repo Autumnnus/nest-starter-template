@@ -12,6 +12,8 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.interceptor';
 import { AppValidationPipe } from 'src/common/pipes/app-validation.pipe';
 import { TraceIdMiddleware } from 'src/common/middleware/trace-id.middleware';
+import databaseConfig from 'src/config/database.config';
+import { DatabaseModule } from 'src/database/database.module';
 import { UsersModule } from 'src/users/users.module';
 
 @Module({
@@ -22,7 +24,9 @@ import { UsersModule } from 'src/users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      load: [databaseConfig],
     }),
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [

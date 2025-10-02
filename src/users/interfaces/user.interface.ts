@@ -6,16 +6,6 @@ export interface UserProfile {
   bio?: string;
 }
 
-export interface UserRecord {
-  id: string;
-  email: string;
-  password: string;
-  roles: Role[];
-  profile: UserProfile;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface PublicUser {
   id: string;
   email: string;
@@ -24,3 +14,5 @@ export interface PublicUser {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UserRecord extends PublicUser {}

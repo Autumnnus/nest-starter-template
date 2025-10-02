@@ -31,6 +31,34 @@
 $ yarn install
 ```
 
+Copy the example environment file and adjust the database credentials as needed:
+
+```bash
+$ cp .env.example .env
+```
+
+## Environment configuration
+
+The application connects to PostgreSQL through TypeORM. The most relevant settings are:
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `DB_HOST` | Database host name | `localhost` |
+| `DB_PORT` | Database port | `5432` |
+| `DB_USER` | Database user | `postgres` |
+| `DB_PASSWORD` | Database password | `postgres` |
+| `DB_NAME` | Database name | `nest_app` |
+| `DB_SYNCHRONIZE` | Enables automatic schema sync in non-production environments | `true` |
+| `DB_LOGGING` | Enables SQL logging | `true` |
+| `DB_SSL` | Enables SSL when set to `true` | `false` |
+| `DB_SEED` | Seeds demo users for local development | `true` |
+
+You can spin up a local PostgreSQL instance with Docker:
+
+```bash
+docker run --name nest-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=nest_app -p 5432:5432 -d postgres:16
+```
+
 ## Compile and run the project
 
 ```bash
@@ -43,6 +71,39 @@ $ yarn run start:dev
 # production mode
 $ yarn run start:prod
 ```
+
+## Database schema
+
+The project auto-loads TypeORM entities and maps them to PostgreSQL tables using a layered architecture.
+
+### `users`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `email` | `varchar(160)` | Unique, stored lowercase |
+| `password_hash` | `varchar(255)` | Argon2 hash |
+| `roles` | `Role[]` | Array enum (`USER`, `ADMIN`, `MODERATOR`) |
+| `profile_display_name` | `varchar(80)` | Profile display name |
+| `profile_locale` | `varchar(10)` | Default `en-US` |
+| `profile_bio` | `text` | Nullable |
+| `created_at` | `timestamptz` | Managed by TypeORM |
+| `updated_at` | `timestamptz` | Managed by TypeORM |
+
+### `auth_sessions`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `user_id` | `uuid` | Foreign key to `users.id` |
+| `refresh_token` | `varchar(192)` | Unique refresh token |
+| `expires_at` | `timestamptz` | Session expiry |
+| `last_accessed_at` | `timestamptz` | Updated on activity |
+| `device` | `jsonb` | Optional device metadata |
+| `created_at` | `timestamptz` | Managed by TypeORM |
+| `updated_at` | `timestamptz` | Managed by TypeORM |
+
+With `DB_SEED=true`, three demo accounts (learner, instructor, admin) are created with hashed passwords for quick testing.
 
 ## Run tests
 

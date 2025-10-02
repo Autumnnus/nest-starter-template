@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/require-await */
 import {
   Injectable,
   NotFoundException,
@@ -47,7 +45,7 @@ export class AuthService {
     traceId: string | undefined,
     metadata: { ipAddress?: string; userAgent?: string },
   ): Promise<SignedTokens> {
-    const user = this.usersService.validateCredentials(
+    const user = await this.usersService.validateCredentials(
       request.email,
       request.password,
     );
@@ -58,14 +56,18 @@ export class AuthService {
       });
     }
 
-    const session = this.sessionStore.create(user.id, this.refreshTokenTtlMs, {
-      deviceId: request.deviceId,
-      deviceName: request.deviceName,
-      ipAddress: metadata.ipAddress,
-      userAgent: metadata.userAgent,
-    });
+    const session = await this.sessionStore.create(
+      user.id,
+      this.refreshTokenTtlMs,
+      {
+        deviceId: request.deviceId,
+        deviceName: request.deviceName,
+        ipAddress: metadata.ipAddress,
+        userAgent: metadata.userAgent,
+      },
+    );
 
-    const tokens = this.generateTokens(
+    const tokens = await this.generateTokens(
       user.id,
       user.email,
       user.roles,
@@ -89,7 +91,9 @@ export class AuthService {
     request: RefreshTokenDto,
     traceId: string | undefined,
   ): Promise<SignedTokens> {
-    const session = this.sessionStore.findByRefreshToken(request.refreshToken);
+    const session = await this.sessionStore.findByRefreshToken(
+      request.refreshToken,
+    );
     if (!session) {
       throw new UnauthorizedException({
         code: 'INVALID_REFRESH_TOKEN',
@@ -98,23 +102,23 @@ export class AuthService {
     }
 
     if (new Date(session.expiresAt).getTime() <= Date.now()) {
-      this.sessionStore.revoke(session.id);
+      await this.sessionStore.revoke(session.id);
       throw new UnauthorizedException({
         code: 'REFRESH_TOKEN_EXPIRED',
         message: 'Refresh token has expired. Please login again.',
       });
     }
 
-    const user = this.usersService.findUserRecordById(session.userId);
+    const user = await this.usersService.findUserRecordById(session.userId);
     if (!user) {
-      this.sessionStore.revoke(session.id);
+      await this.sessionStore.revoke(session.id);
       throw new UnauthorizedException({
         code: 'ACCOUNT_NOT_FOUND',
         message: 'User account could not be located.',
       });
     }
 
-    const rotated = this.sessionStore.rotateRefreshToken(
+    const rotated = await this.sessionStore.rotateRefreshToken(
       session.id,
       this.refreshTokenTtlMs,
     );
@@ -125,7 +129,7 @@ export class AuthService {
       });
     }
 
-    const tokens = this.generateTokens(
+    const tokens = await this.generateTokens(
       user.id,
       user.email,
       user.roles,
@@ -157,7 +161,7 @@ export class AuthService {
       });
     }
 
-    const session = this.sessionStore.touch(payload.sessionId);
+    const session = await this.sessionStore.touch(payload.sessionId);
     if (!session || session.userId !== payload.sub) {
       throw new UnauthorizedException({
         code: 'SESSION_NOT_ACTIVE',
@@ -165,7 +169,7 @@ export class AuthService {
       });
     }
 
-    const user = this.usersService.findUserRecordById(payload.sub);
+    const user = await this.usersService.findUserRecordById(payload.sub);
     if (!user) {
       throw new UnauthorizedException({
         code: 'ACCOUNT_NOT_FOUND',
@@ -181,24 +185,21 @@ export class AuthService {
     };
   }
 
-  listSessions(
+  async listSessions(
     userId: string,
-  ): Omit<SessionRecord, 'refreshToken' | 'userId'>[] {
-    return this.sessionStore
-      .listByUser(userId)
-      .map(({ refreshToken: _refreshToken, userId: _userId, ...rest }) => ({
-        ...rest,
-      }));
+  ): Promise<Omit<SessionRecord, 'refreshToken' | 'userId'>[]> {
+    const sessions = await this.sessionStore.listByUser(userId);
+    return sessions.map(({ refreshToken: _refreshToken, userId: _userId, ...rest }) => ({
+      ...rest,
+    }));
   }
 
-  revokeSession(
+  async revokeSession(
     userId: string,
     sessionId: string,
     traceId: string | undefined,
-  ) {
-    const session = this.sessionStore
-      .listByUser(userId)
-      .find((record) => record.id === sessionId);
+  ): Promise<void> {
+    const session = await this.sessionStore.findOwnedBy(userId, sessionId);
     if (!session) {
       throw new NotFoundException({
         code: 'SESSION_NOT_FOUND',
@@ -206,7 +207,7 @@ export class AuthService {
       });
     }
 
-    this.sessionStore.revoke(sessionId);
+    await this.sessionStore.revoke(sessionId);
     this.auditService.record('auth.session.revoked', {
       userId,
       traceId,
@@ -214,13 +215,14 @@ export class AuthService {
     });
   }
 
-  private generateTokens(
+  private async generateTokens(
     userId: string,
     email: string,
     roles: string[],
     session: SessionRecord,
-  ): SignedTokens {
-    const activeSession = this.sessionStore.touch(session.id) ?? session;
+  ): Promise<SignedTokens> {
+    const activeSession =
+      (await this.sessionStore.touch(session.id)) ?? session;
     const now = Math.floor(Date.now() / 1000);
     const payload: JwtPayload = {
       sub: userId,

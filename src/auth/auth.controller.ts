@@ -128,7 +128,7 @@ export class AuthController {
     },
   })
   @ApiBearerAuth('JWT-auth')
-  sessions(@CurrentUser() user: IUser) {
+  async sessions(@CurrentUser() user: IUser) {
     return this.authService.listSessions(user.id);
   }
 
@@ -151,7 +151,7 @@ export class AuthController {
     description: 'Session revoked successfully',
     schema: { example: { status: 'revoked', sessionId: 'sess_01J7Z9...' } },
   })
-  revokeSession(
+  async revokeSession(
     @CurrentUser() user: IUser,
     @Param('sessionId') sessionId: string,
     @Req() request: Request,
@@ -163,7 +163,7 @@ export class AuthController {
       });
     }
 
-    this.authService.revokeSession(user.id, sessionId, request.traceId);
+    await this.authService.revokeSession(user.id, sessionId, request.traceId);
     return { status: 'revoked', sessionId };
   }
 }
