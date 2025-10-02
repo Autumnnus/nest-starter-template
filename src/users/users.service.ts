@@ -5,9 +5,13 @@ import { Role } from 'src/common/types/role.enum';
 import { PaginatedResult } from 'src/common/utils/pagination.util';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
-import { PublicUser, UserProfile, UserRecord } from 'src/users/interfaces/user.interface';
-import { UsersRepository } from 'src/users/infrastructure/repositories/users.repository';
 import { UserEntity } from 'src/users/infrastructure/entities/user.entity';
+import { UsersRepository } from 'src/users/infrastructure/repositories/users.repository';
+import {
+  PublicUser,
+  UserProfile,
+  UserRecord,
+} from 'src/users/interfaces/user.interface';
 
 interface SeedUserInput {
   email: string;
@@ -29,7 +33,9 @@ export class UsersService implements OnModuleInit {
     await this.seedDefaultUsers();
   }
 
-  async listUsers(query: ListUsersQueryDto): Promise<PaginatedResult<PublicUser>> {
+  async listUsers(
+    query: ListUsersQueryDto,
+  ): Promise<PaginatedResult<PublicUser>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const { items, total } = await this.usersRepository.paginate(query);

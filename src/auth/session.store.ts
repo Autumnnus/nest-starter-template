@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes } from 'crypto';
-import { Repository } from 'typeorm';
-import { AuthSessionEntity } from 'src/auth/infrastructure/entities/auth-session.entity';
 import { SessionDeviceInfo } from 'src/auth/domain/session.types';
+import { AuthSessionEntity } from 'src/auth/infrastructure/entities/auth-session.entity';
+import { Repository } from 'typeorm';
 
 export interface SessionRecord {
   id: string;
@@ -40,7 +40,9 @@ export class SessionStore {
     return this.toRecord(saved);
   }
 
-  async findByRefreshToken(refreshToken: string): Promise<SessionRecord | null> {
+  async findByRefreshToken(
+    refreshToken: string,
+  ): Promise<SessionRecord | null> {
     const entity = await this.repository.findOne({
       where: { refreshToken },
     });

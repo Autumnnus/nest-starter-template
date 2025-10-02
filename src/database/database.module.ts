@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, type TypeOrmModuleOptions } from '@nestjs/typeorm';
+
 import type { DatabaseConfig } from 'src/config/database.config';
 
 @Module({
@@ -8,6 +9,7 @@ import type { DatabaseConfig } from 'src/config/database.config';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
+      // eslint-disable-next-line @typescript-eslint/require-await
       useFactory: async (
         configService: ConfigService,
       ): Promise<TypeOrmModuleOptions> => {

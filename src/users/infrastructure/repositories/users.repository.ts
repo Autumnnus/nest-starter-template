@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 import { UserEntity } from 'src/users/infrastructure/entities/user.entity';
+import { Repository } from 'typeorm';
 
 export interface PaginatedUsersResult {
   items: UserEntity[];
@@ -60,9 +60,11 @@ export class UsersRepository {
     if (profile.displayName !== undefined) {
       partial.displayName = profile.displayName;
     }
+
     if (profile.locale !== undefined) {
       partial.locale = profile.locale;
     }
+
     if (profile.bio !== undefined) {
       partial.bio = profile.bio ?? null;
     }

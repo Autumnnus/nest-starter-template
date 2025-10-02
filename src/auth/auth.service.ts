@@ -189,9 +189,11 @@ export class AuthService {
     userId: string,
   ): Promise<Omit<SessionRecord, 'refreshToken' | 'userId'>[]> {
     const sessions = await this.sessionStore.listByUser(userId);
-    return sessions.map(({ refreshToken: _refreshToken, userId: _userId, ...rest }) => ({
-      ...rest,
-    }));
+    return sessions.map(
+      ({ refreshToken: _refreshToken, userId: _userId, ...rest }) => ({
+        ...rest,
+      }),
+    );
   }
 
   async revokeSession(

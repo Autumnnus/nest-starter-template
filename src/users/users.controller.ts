@@ -76,7 +76,10 @@ export class UsersController {
       },
     },
   })
-  async getUser(@Param('id') userId: string, @CurrentUser() currentUser: IUser) {
+  async getUser(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: IUser,
+  ) {
     const isSelf = currentUser.id === userId;
     const hasPrivilege =
       currentUser.roles.includes(Role.Admin) ||

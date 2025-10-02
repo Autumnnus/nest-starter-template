@@ -1,3 +1,4 @@
+import { Role } from 'src/common/types/role.enum';
 import {
   Column,
   CreateDateColumn,
@@ -6,7 +7,6 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Role } from 'src/common/types/role.enum';
 
 @Entity({ name: 'users' })
 @Index('IDX_users_email', ['email'], { unique: true })
@@ -33,7 +33,12 @@ export class UserEntity {
   @Column({ name: 'profile_display_name', type: 'varchar', length: 80 })
   displayName!: string;
 
-  @Column({ name: 'profile_locale', type: 'varchar', length: 10, default: 'en-US' })
+  @Column({
+    name: 'profile_locale',
+    type: 'varchar',
+    length: 10,
+    default: 'en-US',
+  })
   locale!: string;
 
   @Column({ name: 'profile_bio', type: 'text', nullable: true })

@@ -6,7 +6,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { SessionDeviceInfo } from 'src/auth/domain/session.types';
+
+import type { SessionDeviceInfo } from 'src/auth/domain/session.types';
 
 @Entity({ name: 'auth_sessions' })
 @Index('IDX_auth_sessions_refresh_token', ['refreshToken'], { unique: true })
