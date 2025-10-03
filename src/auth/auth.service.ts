@@ -189,11 +189,12 @@ export class AuthService {
     userId: string,
   ): Promise<Omit<SessionRecord, 'refreshToken' | 'userId'>[]> {
     const sessions = await this.sessionStore.listByUser(userId);
-    return sessions.map(
-      ({ refreshToken: _refreshToken, userId: _userId, ...rest }) => ({
-        ...rest,
-      }),
-    );
+    return sessions.map((s) => {
+      const copy: Partial<typeof s> = { ...s };
+      delete copy.refreshToken;
+      delete copy.userId;
+      return copy as Omit<SessionRecord, 'refreshToken' | 'userId'>;
+    });
   }
 
   async revokeSession(
