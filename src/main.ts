@@ -1,6 +1,7 @@
 import { Logger, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from 'src/app.module';
 
@@ -18,6 +19,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .addTag('Authentication', 'Authentication endpoints')
     .addTag('Nest Starter')
+    .addTag('Notifications', 'Realtime notifications via WebSocket & microservice')
     .addApiKey(
       {
         type: 'apiKey',
@@ -44,11 +46,31 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
 
+  const microserviceHost = configService.get<string>(
+    'messaging.tcp.host',
+    '127.0.0.1',
+  );
+  const microservicePort = configService.get<number>('messaging.tcp.port', 8877);
+
+  const microserviceOptions: MicroserviceOptions = {
+    transport: Transport.TCP,
+    options: {
+      host: microserviceHost,
+      port: microservicePort,
+    },
+  };
+
+  app.connectMicroservice<MicroserviceOptions>(microserviceOptions);
+  await app.startAllMicroservices();
+
   const port = configService.get<number>('PORT') ?? 3005;
   await app.listen(port);
 
   const logger = new Logger('Bootstrap');
   logger.log(`\x1b[34mServer is running on ${port}\x1b[0m`);
+  logger.log(
+    `\x1b[34mNotifications microservice listening on ${microserviceHost}:${microservicePort}\x1b[0m`,
+  );
   logger.log(
     `\x1b[34mSwagger is running on http://localhost:${port}/api\x1b[0m`,
   );
