@@ -13,8 +13,10 @@ import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.inte
 import { TraceIdMiddleware } from 'src/common/middleware/trace-id.middleware';
 import { AppValidationPipe } from 'src/common/pipes/app-validation.pipe';
 import databaseConfig from 'src/config/database.config';
+import rabbitmqConfig from 'src/config/rabbitmq.config';
 import redisConfig from 'src/config/redis.config';
 import { DatabaseModule } from 'src/database/database.module';
+import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 import { RedisModule } from 'src/redis/redis.module';
 import { UsersModule } from 'src/users/users.module';
 import { WebsocketModule } from 'src/websocket/websocket.module';
@@ -27,10 +29,11 @@ import { WebsocketModule } from 'src/websocket/websocket.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      load: [databaseConfig, redisConfig],
+      load: [databaseConfig, redisConfig, rabbitmqConfig],
     }),
     DatabaseModule,
     RedisModule,
+    RabbitMQModule,
     WebsocketModule,
   ],
   controllers: [AppController],

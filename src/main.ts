@@ -1,8 +1,12 @@
 import { Logger, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from 'src/app.module';
+
+import type { MicroserviceOptions } from '@nestjs/microservices';
+import type { RabbitMQConfig } from 'src/config/rabbitmq.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -43,11 +47,29 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   const configService = app.get(ConfigService);
+  const logger = new Logger('Bootstrap');
+
+  const rabbitmqConfig = configService.get<RabbitMQConfig>('rabbitmq');
+
+  if (rabbitmqConfig) {
+    app.connectMicroservice<MicroserviceOptions>({
+      transport: Transport.RMQ,
+      options: {
+        urls: rabbitmqConfig.urls,
+        queue: rabbitmqConfig.queue,
+        queueOptions: rabbitmqConfig.queueOptions,
+        prefetchCount: rabbitmqConfig.prefetchCount,
+        isGlobalPrefetch: rabbitmqConfig.isGlobalPrefetch,
+      },
+    });
+
+    await app.startAllMicroservices();
+    logger.log('\x1b[34mRabbitMQ microservice is running\x1b[0m');
+  }
 
   const port = configService.get<number>('PORT') ?? 3005;
   await app.listen(port);
 
-  const logger = new Logger('Bootstrap');
   logger.log(`\x1b[34mServer is running on ${port}\x1b[0m`);
   logger.log(
     `\x1b[34mSwagger is running on http://localhost:${port}/api\x1b[0m`,
