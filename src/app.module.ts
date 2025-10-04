@@ -10,12 +10,15 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 import { RateLimitGuard } from 'src/common/guards/rate-limit.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.interceptor';
+import { LoggingMiddleware } from 'src/common/middleware/logging.middleware';
 import { TraceIdMiddleware } from 'src/common/middleware/trace-id.middleware';
 import { AppValidationPipe } from 'src/common/pipes/app-validation.pipe';
 import databaseConfig from 'src/config/database.config';
+import elasticsearchConfig from 'src/config/elasticsearch.config';
 import rabbitmqConfig from 'src/config/rabbitmq.config';
 import redisConfig from 'src/config/redis.config';
 import { DatabaseModule } from 'src/database/database.module';
+import { LoggingModule } from 'src/logging/logging.module';
 import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 import { RedisModule } from 'src/redis/redis.module';
 import { UsersModule } from 'src/users/users.module';
@@ -23,14 +26,15 @@ import { WebsocketModule } from 'src/websocket/websocket.module';
 
 @Module({
   imports: [
-    CommonModule,
-    AuthModule,
-    UsersModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      load: [databaseConfig, redisConfig, rabbitmqConfig],
+      load: [databaseConfig, redisConfig, rabbitmqConfig, elasticsearchConfig],
     }),
+    LoggingModule,
+    CommonModule,
+    AuthModule,
+    UsersModule,
     DatabaseModule,
     RedisModule,
     RabbitMQModule,
@@ -45,10 +49,11 @@ import { WebsocketModule } from 'src/websocket/websocket.module';
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     { provide: APP_PIPE, useClass: AppValidationPipe },
+    LoggingMiddleware,
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TraceIdMiddleware).forRoutes('*');
+    consumer.apply(TraceIdMiddleware, LoggingMiddleware).forRoutes('*');
   }
 }
