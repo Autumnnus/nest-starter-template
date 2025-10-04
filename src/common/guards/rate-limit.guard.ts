@@ -1,8 +1,8 @@
 import {
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   Injectable,
-  TooManyRequestsException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import {
@@ -53,15 +53,23 @@ export class RateLimitGuard implements CanActivate {
     );
 
     for (const scopeKey of scopeKeys) {
-      const result = await this.rateLimitService.checkRateLimit(scopeKey, config);
+      const result = await this.rateLimitService.checkRateLimit(
+        scopeKey,
+        config,
+      );
       scopeResults.push(result);
     }
 
     const limit = config.limit;
-    const remaining = Math.min(...scopeResults.map((result) => result.remaining));
+    const remaining = Math.min(
+      ...scopeResults.map((result) => result.remaining),
+    );
     const reset = Math.max(...scopeResults.map((result) => result.ttlSec));
     response.setHeader('X-RateLimit-Limit', limit.toString());
-    response.setHeader('X-RateLimit-Remaining', Math.max(0, remaining).toString());
+    response.setHeader(
+      'X-RateLimit-Remaining',
+      Math.max(0, remaining).toString(),
+    );
     response.setHeader('X-RateLimit-Reset', Math.max(0, reset).toString());
 
     const exceededScopes = scopeResults.filter((result) => !result.allowed);
@@ -71,7 +79,7 @@ export class RateLimitGuard implements CanActivate {
       );
       response.setHeader('Retry-After', Math.max(1, retryAfter).toString());
 
-      throw new TooManyRequestsException({
+      throw new BadRequestException({
         code: 'RATE_LIMIT_EXCEEDED',
         message: 'Too many requests. Please try again later.',
       });
@@ -111,14 +119,18 @@ export class RateLimitGuard implements CanActivate {
         if (ip) {
           resolved.add(`ip-${ip}`);
         }
+
         continue;
       }
 
       if (subject === 'user') {
-        const userId = (request as Request & { user?: { id?: string | number } }).user?.id;
+        const userId = (
+          request as Request & { user?: { id?: string | number } }
+        ).user?.id;
         if (userId !== undefined && userId !== null) {
           resolved.add(`user-${userId}`);
         }
+
         continue;
       }
 
@@ -126,9 +138,13 @@ export class RateLimitGuard implements CanActivate {
         if (subject.type === 'header') {
           const headerKey = subject.name.toLowerCase();
           const headerValue = request.headers[headerKey];
-          if (typeof headerValue === 'string' && headerValue.trim().length > 0) {
+          if (
+            typeof headerValue === 'string' &&
+            headerValue.trim().length > 0
+          ) {
             resolved.add(`${subject.name}-${headerValue}`);
           }
+
           continue;
         }
 
@@ -164,20 +180,20 @@ export class RateLimitGuard implements CanActivate {
     }
 
     const remoteAddress =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ((request.connection as any)?.remoteAddress as string | undefined) ??
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ((request.socket as any)?.remoteAddress as string | undefined);
 
     return remoteAddress ?? undefined;
   }
 
   private normalizeForKey(value: string): string {
-    return value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/-{2,}/g, '-')
-      .trim() || 'unknown';
+    return (
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/-{2,}/g, '-')
+        .trim() || 'unknown'
+    );
   }
 }

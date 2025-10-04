@@ -27,7 +27,11 @@ export class RateLimitService {
     const strategy: RateLimitStrategy = options.strategy ?? 'fixed';
 
     if (strategy === 'sliding') {
-      return this.checkSlidingWindow(scopeKey, options.limit, options.windowSec);
+      return this.checkSlidingWindow(
+        scopeKey,
+        options.limit,
+        options.windowSec,
+      );
     }
 
     return this.checkFixedWindow(scopeKey, options.limit, options.windowSec);
@@ -54,7 +58,8 @@ export class RateLimitService {
         .exec();
 
       const incrResult = results?.[0]?.[1];
-      const totalHits = typeof incrResult === 'number' ? incrResult : Number(incrResult ?? 0);
+      const totalHits =
+        typeof incrResult === 'number' ? incrResult : Number(incrResult ?? 0);
       const allowed = totalHits <= limit;
       const remaining = Math.max(0, limit - totalHits);
       const retryAfterSec = allowed ? undefined : ttlSec;
@@ -96,9 +101,15 @@ export class RateLimitService {
         .exec();
 
       const totalHitsRaw = results?.[2]?.[1];
-      const totalHits = typeof totalHitsRaw === 'number' ? totalHitsRaw : Number(totalHitsRaw ?? 0);
+      const totalHits =
+        typeof totalHitsRaw === 'number'
+          ? totalHitsRaw
+          : Number(totalHitsRaw ?? 0);
       const oldestEntryRaw = results?.[3]?.[1] as string[] | undefined;
-      const oldestScore = oldestEntryRaw && oldestEntryRaw.length >= 2 ? Number(oldestEntryRaw[1]) : now;
+      const oldestScore =
+        oldestEntryRaw && oldestEntryRaw.length >= 2
+          ? Number(oldestEntryRaw[1])
+          : now;
       const ttlMs = windowSec * 1000 - (now - oldestScore);
       const ttlSec = Math.max(1, Math.ceil(ttlMs / 1000));
       const allowed = totalHits <= limit;
