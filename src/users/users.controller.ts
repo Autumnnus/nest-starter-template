@@ -96,7 +96,7 @@ export class UsersController {
 
   @Patch(':id')
   @Idempotent()
-  @RateLimit({ limit: 30, windowMs: 60_000 })
+  @RateLimit({ limit: 30, windowSec: 60, strategy: 'fixed' })
   @ApiOperation({ summary: 'Update user profile' })
   @ApiParam({ name: 'id', example: 'u_01', description: 'User ID' })
   @ApiHeader({
