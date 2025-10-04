@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type Redis from 'ioredis';
-
 import { RedisService } from 'src/redis/redis.service';
+
+import type Redis from 'ioredis';
 
 interface CacheKeyParts {
   entity: string;
@@ -63,6 +63,7 @@ export class CacheService {
     } catch (error) {
       this.logger.warn(
         `Failed to parse cache entry for key ${key}. Removing corrupted value.`,
+        error,
       );
       await this.redisClient.del(key);
       return null;

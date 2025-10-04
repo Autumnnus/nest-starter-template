@@ -3,6 +3,7 @@ import * as argon2 from 'argon2';
 import { AuditService } from 'src/common/services/audit.service';
 import { Role } from 'src/common/types/role.enum';
 import { PaginatedResult } from 'src/common/utils/pagination.util';
+import { CacheService } from 'src/redis/cache.service';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 import { UserEntity } from 'src/users/infrastructure/entities/user.entity';
@@ -12,7 +13,6 @@ import {
   UserProfile,
   UserRecord,
 } from 'src/users/interfaces/user.interface';
-import { CacheService } from 'src/redis/cache.service';
 
 interface SeedUserInput {
   email: string;
@@ -158,7 +158,9 @@ export class UsersService implements OnModuleInit {
     };
   }
 
-  private async getCachedPublicUser(userId: string): Promise<PublicUser | null> {
+  private async getCachedPublicUser(
+    userId: string,
+  ): Promise<PublicUser | null> {
     return this.cacheService.getOrSet<PublicUser>({
       entity: UsersService.USER_CACHE_ENTITY,
       id: userId,
