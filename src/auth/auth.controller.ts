@@ -34,7 +34,7 @@ export class AuthController {
   @Public()
   @Post(ROUTES.auth.login)
   @Idempotent()
-  @RateLimit({ limit: 5, windowMs: 60_000 })
+  @RateLimit({ limit: 5, windowSec: 60, strategy: 'sliding' })
   @ApiOperation({
     summary: 'User login',
     description:
@@ -78,7 +78,7 @@ export class AuthController {
   @Public()
   @Post(ROUTES.auth.refresh)
   @Idempotent()
-  @RateLimit({ limit: 10, windowMs: 60_000 })
+  @RateLimit({ limit: 10, windowSec: 60, strategy: 'sliding' })
   @ApiOperation({
     summary: 'Refresh access token',
     description: 'Generates a new access token using a valid refresh token.',
@@ -134,7 +134,7 @@ export class AuthController {
 
   @Delete(ROUTES.auth.session)
   @Idempotent()
-  @RateLimit({ limit: 30, windowMs: 60_000 })
+  @RateLimit({ limit: 30, windowSec: 60, strategy: 'fixed' })
   @ApiOperation({ summary: 'Revoke session' })
   @ApiHeader({
     name: 'Idempotency-Key',
