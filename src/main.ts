@@ -1,15 +1,17 @@
-import { Logger, VersioningType } from '@nestjs/common';
+import { VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from 'src/app.module';
 
 import type { MicroserviceOptions } from '@nestjs/microservices';
 import type { RabbitMQConfig } from 'src/config/rabbitmq.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,
@@ -47,7 +49,7 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   const configService = app.get(ConfigService);
-  const logger = new Logger('Bootstrap');
+  const logger = app.get(Logger);
 
   const rabbitmqConfig = configService.get<RabbitMQConfig>('rabbitmq');
 

@@ -1,19 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-
-export interface AuditRecord {
-  id: string;
-  event: string;
-  timestamp: string;
-  userId?: string;
-  traceId?: string;
-  metadata?: Record<string, unknown>;
-}
+import { Injectable } from '@nestjs/common';
+import { LoggingQueueService } from 'src/logging/logging-queue.service';
 
 @Injectable()
 export class AuditService {
-  private readonly logger = new Logger(AuditService.name);
-  private readonly records: AuditRecord[] = [];
+  constructor(private readonly loggingQueueService: LoggingQueueService) {}
 
   record(
     event: string,
@@ -22,22 +12,14 @@ export class AuditService {
       traceId?: string;
       metadata?: Record<string, unknown>;
     },
-  ) {
-    const entry: AuditRecord = {
-      id: randomUUID(),
+  ): void {
+    const occurredAt = new Date().toISOString();
+    void this.loggingQueueService.enqueueAuditLog({
       event,
-      timestamp: new Date().toISOString(),
+      occurredAt,
       userId: details.userId,
       traceId: details.traceId,
       metadata: details.metadata,
-    };
-    this.records.push(entry);
-    this.logger.log(
-      `AUDIT: ${event} ${JSON.stringify({ userId: entry.userId, traceId: entry.traceId })}`,
-    );
-  }
-
-  findAll(): AuditRecord[] {
-    return [...this.records];
+    });
   }
 }
