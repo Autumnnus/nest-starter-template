@@ -61,7 +61,7 @@ async function bootstrap() {
         queue: rabbitmqConfig.queue,
         queueOptions: rabbitmqConfig.queueOptions,
         prefetchCount: rabbitmqConfig.prefetchCount,
-        isGlobalPrefetch: rabbitmqConfig.isGlobalPrefetch,
+        isGlobalPrefetchCount: rabbitmqConfig.isGlobalPrefetch,
       },
     });
 
@@ -72,10 +72,8 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') ?? 3005;
   await app.listen(port);
 
-  logger.log(`\x1b[34mServer is running on ${port}\x1b[0m`);
-  logger.log(
-    `\x1b[34mSwagger is running on http://localhost:${port}/api\x1b[0m`,
-  );
+  logger.log(`Server is running on ${port}`);
+  logger.log(`Swagger is running on http://localhost:${port}/api`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

@@ -3,6 +3,7 @@ import * as argon2 from 'argon2';
 import { AuditService } from 'src/common/services/audit.service';
 import { Role } from 'src/common/types/role.enum';
 import { PaginatedResult } from 'src/common/utils/pagination.util';
+import { CacheService } from 'src/redis/cache.service';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 import { UserEntity } from 'src/users/infrastructure/entities/user.entity';
@@ -24,9 +25,13 @@ interface SeedUserInput {
 
 @Injectable()
 export class UsersService implements OnModuleInit {
+  private static readonly USER_CACHE_ENTITY = 'user';
+  private static readonly USER_CACHE_TTL_SECONDS = 30 * 60;
+
   constructor(
     private readonly auditService: AuditService,
     private readonly usersRepository: UsersRepository,
+    private readonly cacheService: CacheService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -51,15 +56,15 @@ export class UsersService implements OnModuleInit {
   }
 
   async findById(userId: string): Promise<PublicUser> {
-    const record = await this.usersRepository.findById(userId);
-    if (!record) {
+    const user = await this.getCachedPublicUser(userId);
+    if (!user) {
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User could not be found.',
       });
     }
 
-    return this.toPublicUser(record);
+    return user;
   }
 
   async updateUser(
@@ -78,6 +83,13 @@ export class UsersService implements OnModuleInit {
       });
     }
 
+    const publicUser = this.toPublicUser(record);
+    await this.cacheService.set(
+      { entity: UsersService.USER_CACHE_ENTITY, id: userId },
+      publicUser,
+      { ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS },
+    );
+
     this.auditService.record('user.profile.updated', {
       userId,
       traceId,
@@ -86,7 +98,7 @@ export class UsersService implements OnModuleInit {
       },
     });
 
-    return this.toPublicUser(record);
+    return publicUser;
   }
 
   async validateCredentials(
@@ -104,12 +116,19 @@ export class UsersService implements OnModuleInit {
       return null;
     }
 
-    return this.toUserRecord(entity);
+    const record = this.toUserRecord(entity);
+    await this.cacheService.set(
+      { entity: UsersService.USER_CACHE_ENTITY, id: entity.id },
+      record,
+      { ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS },
+    );
+
+    return record;
   }
 
   async findUserRecordById(userId: string): Promise<UserRecord | null> {
-    const entity = await this.usersRepository.findById(userId);
-    return entity ? this.toUserRecord(entity) : null;
+    const user = await this.getCachedPublicUser(userId);
+    return user ? (user as UserRecord) : null;
   }
 
   private toPublicUser(user: UserEntity): PublicUser {
@@ -123,8 +142,12 @@ export class UsersService implements OnModuleInit {
     };
   }
 
-  private toUserRecord(user: UserEntity): UserRecord {
-    return this.toPublicUser(user);
+  private toUserRecord(user: UserEntity | PublicUser): UserRecord {
+    if (typeof (user as PublicUser).createdAt === 'string') {
+      return user as UserRecord;
+    }
+
+    return this.toPublicUser(user as UserEntity);
   }
 
   private toProfile(user: UserEntity): UserProfile {
@@ -133,6 +156,20 @@ export class UsersService implements OnModuleInit {
       locale: user.locale,
       bio: user.bio ?? undefined,
     };
+  }
+
+  private async getCachedPublicUser(
+    userId: string,
+  ): Promise<PublicUser | null> {
+    return this.cacheService.getOrSet<PublicUser>({
+      entity: UsersService.USER_CACHE_ENTITY,
+      id: userId,
+      ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS,
+      loader: async () => {
+        const entity = await this.usersRepository.findById(userId);
+        return entity ? this.toPublicUser(entity) : null;
+      },
+    });
   }
 
   private async seedDefaultUsers(): Promise<void> {
