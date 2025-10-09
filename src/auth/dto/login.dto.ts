@@ -10,7 +10,7 @@ import {
 
 export class LoginDto {
   @ApiProperty({
-    example: 'johndoe@example.com',
+    example: 'admin@example.com',
     description: 'Kullanıcı e-postası',
   })
   @IsEmail()
@@ -18,7 +18,7 @@ export class LoginDto {
   email!: string;
 
   @ApiProperty({
-    example: '123123',
+    example: 'Admin#123',
     description: 'Kullanıcı şifresi',
   })
   @IsString()
