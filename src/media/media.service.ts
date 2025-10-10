@@ -1,5 +1,6 @@
 import {
   DeleteObjectsCommand,
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
   type DeleteObjectsCommandInput,
@@ -12,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { lookup as lookupMime, extension as mimeExtension } from 'mime-types';
+import { Readable } from 'node:stream';
 import Sharp from 'sharp';
 import {
   ALLOWED_AUDIO_MIME_TYPES,
@@ -108,6 +110,24 @@ export class MediaService {
     );
   }
 
+  async deleteMediaByManifestKey(manifestKey: string): Promise<void> {
+    if (!manifestKey) {
+      return;
+    }
+
+    const manifest = await this.fetchManifest(manifestKey);
+    if (!manifest) {
+      this.logger.warn(
+        `Manifest ${manifestKey} could not be loaded; skipping derived asset cleanup but removing manifest itself.`,
+      );
+
+      await this.deleteObjects([manifestKey]);
+      return;
+    }
+
+    await this.deleteMedia(manifest);
+  }
+
   async deleteMedia(manifest: MediaManifest | null | undefined): Promise<void> {
     if (!manifest) {
       return;
@@ -142,14 +162,64 @@ export class MediaService {
       }
     }
 
-    const objects = Array.from(keys).map((Key) => ({ Key }));
-    if (objects.length === 0) {
+    const objectKeys = Array.from(keys);
+    if (objectKeys.length === 0) {
+      return;
+    }
+
+    await this.deleteObjects(objectKeys);
+  }
+
+  private async fetchManifest(
+    manifestKey: string,
+  ): Promise<MediaManifest | null> {
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: manifestKey }),
+      );
+
+      const body = response.Body;
+      if (!body) {
+        return null;
+      }
+
+      const payload = await this.streamToString(
+        body as Readable | { transformToString?: () => Promise<string> },
+      );
+      return JSON.parse(payload) as MediaManifest;
+    } catch (error) {
+      const err = error as Error & {
+        name?: string;
+        Code?: string;
+        $metadata?: { httpStatusCode?: number };
+      };
+      if (
+        err.name === 'NoSuchKey' ||
+        err.Code === 'NoSuchKey' ||
+        err.$metadata?.httpStatusCode === 404
+      ) {
+        return null;
+      }
+
+      this.logger.error(
+        `Failed to load media manifest ${manifestKey} from S3: ${err.message}`,
+        err.stack,
+      );
+      throw new InternalServerErrorException({
+        code: 'MEDIA_MANIFEST_LOAD_FAILED',
+        message: 'Failed to load media manifest from storage.',
+      });
+    }
+  }
+
+  private async deleteObjects(keys: string[]): Promise<void> {
+    if (keys.length === 0) {
       return;
     }
 
     const input: DeleteObjectsCommandInput = {
       Bucket: this.bucket,
-      Delete: { Objects: objects },
+      Delete: { Objects: keys.map((Key) => ({ Key })) },
     };
 
     try {
@@ -165,6 +235,25 @@ export class MediaService {
         message: 'Failed to delete media assets from storage.',
       });
     }
+  }
+
+  private async streamToString(
+    stream: Readable | { transformToString?: () => Promise<string> },
+  ): Promise<string> {
+    if (
+      'transformToString' in stream &&
+      typeof stream.transformToString === 'function'
+    ) {
+      return stream.transformToString();
+    }
+
+    const readable = stream as Readable;
+    const chunks: Buffer[] = [];
+    return new Promise<string>((resolve, reject) => {
+      readable.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      readable.on('error', (error) => reject(error));
+      readable.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    });
   }
 
   private async processImage(

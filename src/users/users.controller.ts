@@ -136,10 +136,8 @@ export class UsersController {
         profile: {
           displayName: 'John Doe',
           locale: 'en-US',
-          photo: {
-            manifestKey:
-              'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
-          },
+          photo:
+            'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
         },
       },
     },
@@ -177,7 +175,7 @@ export class UsersController {
     },
   })
   @ApiOkResponse({
-    description: 'Updated user with profile photo manifest',
+    description: 'Updated user with profile photo reference',
     schema: {
       example: {
         id: 'u_01',
@@ -186,13 +184,8 @@ export class UsersController {
         profile: {
           displayName: 'John Doe',
           locale: 'en-US',
-          photo: {
-            manifestKey:
-              'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
-            original: {
-              key: 'media/image/avatar/2024/01/01/abcdef123456-uuid/original.jpg',
-            },
-          },
+          photo:
+            'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
         },
       },
     },

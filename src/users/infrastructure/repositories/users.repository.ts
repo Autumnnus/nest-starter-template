@@ -5,8 +5,6 @@ import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 import { UserEntity } from 'src/users/infrastructure/entities/user.entity';
 import { Repository } from 'typeorm';
 
-import type { MediaManifest } from 'src/media/interfaces/media-manifest.interface';
-
 export interface PaginatedUsersResult {
   items: UserEntity[];
   total: number;
@@ -81,9 +79,9 @@ export class UsersRepository {
 
   async updateProfilePhoto(
     userId: string,
-    photo: MediaManifest | null,
+    photoKey: string | null,
   ): Promise<UserEntity | null> {
-    await this.repository.update({ id: userId }, { profilePhoto: photo });
+    await this.repository.update({ id: userId }, { profilePhotoKey: photoKey });
     return this.findById(userId);
   }
 

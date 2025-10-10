@@ -20,8 +20,6 @@ import {
   UserRecord,
 } from 'src/users/interfaces/user.interface';
 
-import type { MediaManifest } from 'src/media/interfaces/media-manifest.interface';
-
 interface SeedUserInput {
   email: string;
   password: string;
@@ -128,11 +126,11 @@ export class UsersService implements OnModuleInit {
       purpose: 'avatar',
     });
 
-    await this.safeDeleteMedia(existing.profilePhoto);
+    await this.safeDeleteMedia(existing.profilePhotoKey);
 
     const updated = await this.usersRepository.updateProfilePhoto(
       userId,
-      manifest,
+      manifest.manifestKey,
     );
     if (!updated) {
       throw new NotFoundException({
@@ -171,7 +169,7 @@ export class UsersService implements OnModuleInit {
       });
     }
 
-    await this.safeDeleteMedia(existing.profilePhoto);
+    await this.safeDeleteMedia(existing.profilePhotoKey);
 
     const updated = await this.usersRepository.updateProfilePhoto(userId, null);
     if (!updated) {
@@ -250,22 +248,22 @@ export class UsersService implements OnModuleInit {
       displayName: user.displayName,
       locale: user.locale,
       bio: user.bio ?? undefined,
-      photo: (user.profilePhoto as MediaManifest | undefined) ?? undefined,
+      photo: user.profilePhotoKey ?? undefined,
     };
   }
 
   private async safeDeleteMedia(
-    manifest: MediaManifest | null | undefined,
+    manifestKey: string | null | undefined,
   ): Promise<void> {
-    if (!manifest) {
+    if (!manifestKey) {
       return;
     }
 
     try {
-      await this.mediaService.deleteMedia(manifest);
+      await this.mediaService.deleteMediaByManifestKey(manifestKey);
     } catch (error) {
       this.logger.warn(
-        `Failed to delete media manifest ${manifest.manifestKey}: ${(error as Error).message}`,
+        `Failed to delete media manifest ${manifestKey}: ${(error as Error).message}`,
       );
     }
   }

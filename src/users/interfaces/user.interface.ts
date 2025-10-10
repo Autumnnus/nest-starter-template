@@ -1,12 +1,10 @@
 import { type Role } from 'src/common/types/role.enum';
 
-import type { MediaManifest } from 'src/media/interfaces/media-manifest.interface';
-
 export interface UserProfile {
   displayName: string;
   locale: string;
   bio?: string;
-  photo?: MediaManifest;
+  photo?: string;
 }
 
 export interface PublicUser {
@@ -18,4 +16,4 @@ export interface PublicUser {
   updatedAt: string;
 }
 
-export interface UserRecord extends PublicUser {}
+export type UserRecord = PublicUser;

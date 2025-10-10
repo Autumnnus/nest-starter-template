@@ -118,7 +118,7 @@ The project auto-loads TypeORM entities and maps them to PostgreSQL tables using
 | `profile_display_name` | `varchar(80)` | Profile display name |
 | `profile_locale` | `varchar(10)` | Default `en-US` |
 | `profile_bio` | `text` | Nullable |
-| `profile_photo_manifest` | `jsonb` | Nullable, stores S3 manifest metadata |
+| `profile_photo_key` | `text` | Nullable, stores S3 manifest key (Amazon ID) |
 | `created_at` | `timestamptz` | Managed by TypeORM |
 | `updated_at` | `timestamptz` | Managed by TypeORM |
 

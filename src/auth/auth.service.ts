@@ -30,15 +30,41 @@ export interface SignedTokens {
 
 @Injectable()
 export class AuthService {
-  private readonly jwtSecret = 'education-platform-secret';
-  private readonly accessTokenTtlMs = 15 * 60 * 1000;
-  private readonly refreshTokenTtlMs = 30 * 24 * 60 * 60 * 1000;
+  private readonly jwtAccessSecret =
+    process.env.JWT_ACCESS_SECRET ?? 'education-platform-secret';
+  private readonly jwtRefreshSecret =
+    process.env.JWT_REFRESH_SECRET ?? 'education-platform-refresh-secret';
+  private readonly accessTokenTtlMs = this.parseDuration(
+    process.env.JWT_ACCESS_TTL ?? '15m',
+  );
+  private readonly refreshTokenTtlMs = this.parseDuration(
+    process.env.JWT_REFRESH_TTL ?? '30d',
+  );
 
   constructor(
     private readonly usersService: UsersService,
     private readonly sessionStore: SessionStore,
     private readonly auditService: AuditService,
   ) {}
+
+  private parseDuration(v: string): number {
+    const m = /^(\d+)([smhd])$/.exec(v.trim());
+    if (!m) throw new Error(`Invalid duration: ${v}`);
+
+    const n = Number(m[1]);
+    switch (m[2]) {
+      case 's':
+        return n * 1_000;
+      case 'm':
+        return n * 60_000;
+      case 'h':
+        return n * 3_600_000;
+      case 'd':
+        return n * 86_400_000;
+      default:
+        throw new Error(`Invalid duration: ${v}`);
+    }
+  }
 
   async login(
     request: LoginDto,
@@ -291,7 +317,7 @@ export class AuthService {
   }
 
   private sign(content: string): string {
-    return createHmac('sha256', this.jwtSecret)
+    return createHmac('sha256', this.jwtAccessSecret)
       .update(content)
       .digest('base64url');
   }
