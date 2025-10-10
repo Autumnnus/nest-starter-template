@@ -1,15 +1,23 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
   Patch,
+  Post,
   Query,
   Req,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiHeader,
   ApiOkResponse,
   ApiOperation,
@@ -49,7 +57,13 @@ export class UsersController {
             id: 'u_01',
             email: 'john@example.com',
             roles: ['USER'],
-            profile: { displayName: 'John' },
+            profile: {
+              displayName: 'John',
+              photo: {
+                manifestKey:
+                  'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
+              },
+            },
           },
         ],
         page: 1,
@@ -72,7 +86,13 @@ export class UsersController {
         id: 'u_01',
         email: 'john@example.com',
         roles: ['USER'],
-        profile: { displayName: 'John' },
+        profile: {
+          displayName: 'John',
+          photo: {
+            manifestKey:
+              'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
+          },
+        },
       },
     },
   })
@@ -113,7 +133,14 @@ export class UsersController {
         id: 'u_01',
         email: 'john@example.com',
         roles: ['USER'],
-        profile: { displayName: 'John Doe', locale: 'en-US' },
+        profile: {
+          displayName: 'John Doe',
+          locale: 'en-US',
+          photo: {
+            manifestKey:
+              'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
+          },
+        },
       },
     },
   })
@@ -123,6 +150,102 @@ export class UsersController {
     @Body() body: UpdateUserDto,
     @Req() request: Request,
   ) {
+    this.ensureCanModifyProfile(userId, currentUser);
+
+    return this.usersService.updateUser(userId, body, request.traceId);
+  }
+
+  @Post(':id/profile-photo')
+  @UseInterceptors(FileInterceptor('file', { limits: { files: 1 } }))
+  @RateLimit({ limit: 15, windowSec: 60, strategy: 'fixed' })
+  @ApiOperation({ summary: 'Upload or replace profile photo' })
+  @ApiParam({ name: 'id', example: 'u_01', description: 'User ID' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Profile photo upload (JPEG, PNG, WebP, AVIF, HEIC)',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file to use as profile photo',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiOkResponse({
+    description: 'Updated user with profile photo manifest',
+    schema: {
+      example: {
+        id: 'u_01',
+        email: 'john@example.com',
+        roles: ['USER'],
+        profile: {
+          displayName: 'John Doe',
+          locale: 'en-US',
+          photo: {
+            manifestKey:
+              'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
+            original: {
+              key: 'media/image/avatar/2024/01/01/abcdef123456-uuid/original.jpg',
+            },
+          },
+        },
+      },
+    },
+  })
+  async uploadProfilePhoto(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: IUser,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() request: Request,
+  ) {
+    this.ensureCanModifyProfile(userId, currentUser);
+
+    if (!file) {
+      throw new BadRequestException({
+        code: 'MEDIA_FILE_REQUIRED',
+        message: 'A profile photo file must be provided.',
+      });
+    }
+
+    return this.usersService.updateProfilePhoto(userId, file, request.traceId);
+  }
+
+  @Delete(':id/profile-photo')
+  @RateLimit({ limit: 15, windowSec: 60, strategy: 'fixed' })
+  @ApiOperation({ summary: 'Delete profile photo' })
+  @ApiParam({ name: 'id', example: 'u_01', description: 'User ID' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOkResponse({
+    description: 'Updated user without profile photo',
+    schema: {
+      example: {
+        id: 'u_01',
+        email: 'john@example.com',
+        roles: ['USER'],
+        profile: {
+          displayName: 'John Doe',
+          locale: 'en-US',
+          photo: null,
+        },
+      },
+    },
+  })
+  async deleteProfilePhoto(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: IUser,
+    @Req() request: Request,
+  ) {
+    this.ensureCanModifyProfile(userId, currentUser);
+
+    return this.usersService.removeProfilePhoto(userId, request.traceId);
+  }
+
+  private ensureCanModifyProfile(userId: string, currentUser: IUser): void {
     const isSelf = currentUser.id === userId;
     const isAdmin = currentUser.roles.includes(Role.Admin);
     if (!isSelf && !isAdmin) {
@@ -132,7 +255,5 @@ export class UsersController {
           'You can only update your own profile unless you are an administrator.',
       });
     }
-
-    return this.usersService.updateUser(userId, body, request.traceId);
   }
 }

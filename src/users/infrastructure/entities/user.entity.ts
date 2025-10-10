@@ -8,6 +8,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import type { MediaManifest } from 'src/media/interfaces/media-manifest.interface';
+
 @Entity({ name: 'users' })
 @Index('IDX_users_email', ['email'], { unique: true })
 export class UserEntity {
@@ -43,6 +45,13 @@ export class UserEntity {
 
   @Column({ name: 'profile_bio', type: 'text', nullable: true })
   bio?: string | null;
+
+  @Column({
+    name: 'profile_photo_manifest',
+    type: 'jsonb',
+    nullable: true,
+  })
+  profilePhoto?: MediaManifest | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;

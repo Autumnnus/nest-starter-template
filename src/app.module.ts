@@ -15,10 +15,13 @@ import { TraceIdMiddleware } from 'src/common/middleware/trace-id.middleware';
 import { AppValidationPipe } from 'src/common/pipes/app-validation.pipe';
 import databaseConfig from 'src/config/database.config';
 import elasticsearchConfig from 'src/config/elasticsearch.config';
+import mediaConfig from 'src/config/media.config';
 import rabbitmqConfig from 'src/config/rabbitmq.config';
 import redisConfig from 'src/config/redis.config';
+import s3Config from 'src/config/s3.config';
 import { DatabaseModule } from 'src/database/database.module';
 import { LoggingModule } from 'src/logging/logging.module';
+import { MediaModule } from 'src/media/media.module';
 import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 import { RedisModule } from 'src/redis/redis.module';
 import { UsersModule } from 'src/users/users.module';
@@ -29,11 +32,19 @@ import { WebsocketModule } from 'src/websocket/websocket.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      load: [databaseConfig, redisConfig, rabbitmqConfig, elasticsearchConfig],
+      load: [
+        databaseConfig,
+        redisConfig,
+        rabbitmqConfig,
+        elasticsearchConfig,
+        mediaConfig,
+        s3Config,
+      ],
     }),
     LoggingModule,
     CommonModule,
     AuthModule,
+    MediaModule,
     UsersModule,
     DatabaseModule,
     RedisModule,

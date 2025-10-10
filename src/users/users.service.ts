@@ -1,8 +1,14 @@
-import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { AuditService } from 'src/common/services/audit.service';
 import { Role } from 'src/common/types/role.enum';
 import { PaginatedResult } from 'src/common/utils/pagination.util';
+import { MediaService } from 'src/media/media.service';
 import { CacheService } from 'src/redis/cache.service';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
@@ -13,6 +19,8 @@ import {
   UserProfile,
   UserRecord,
 } from 'src/users/interfaces/user.interface';
+
+import type { MediaManifest } from 'src/media/interfaces/media-manifest.interface';
 
 interface SeedUserInput {
   email: string;
@@ -27,11 +35,13 @@ interface SeedUserInput {
 export class UsersService implements OnModuleInit {
   private static readonly USER_CACHE_ENTITY = 'user';
   private static readonly USER_CACHE_TTL_SECONDS = 30 * 60;
+  private readonly logger = new Logger(UsersService.name);
 
   constructor(
     private readonly auditService: AuditService,
     private readonly usersRepository: UsersRepository,
     private readonly cacheService: CacheService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -101,6 +111,91 @@ export class UsersService implements OnModuleInit {
     return publicUser;
   }
 
+  async updateProfilePhoto(
+    userId: string,
+    file: Express.Multer.File,
+    traceId: string | undefined,
+  ): Promise<PublicUser> {
+    const existing = await this.usersRepository.findById(userId);
+    if (!existing) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User could not be found.',
+      });
+    }
+
+    const [manifest] = await this.mediaService.uploadMedia([file], {
+      purpose: 'avatar',
+    });
+
+    await this.safeDeleteMedia(existing.profilePhoto);
+
+    const updated = await this.usersRepository.updateProfilePhoto(
+      userId,
+      manifest,
+    );
+    if (!updated) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User could not be found.',
+      });
+    }
+
+    const publicUser = this.toPublicUser(updated);
+    await this.cacheService.set(
+      { entity: UsersService.USER_CACHE_ENTITY, id: userId },
+      publicUser,
+      { ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS },
+    );
+
+    this.auditService.record('user.profile.photo.updated', {
+      userId,
+      traceId,
+      metadata: {
+        manifestKey: manifest.manifestKey,
+      },
+    });
+
+    return publicUser;
+  }
+
+  async removeProfilePhoto(
+    userId: string,
+    traceId: string | undefined,
+  ): Promise<PublicUser> {
+    const existing = await this.usersRepository.findById(userId);
+    if (!existing) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User could not be found.',
+      });
+    }
+
+    await this.safeDeleteMedia(existing.profilePhoto);
+
+    const updated = await this.usersRepository.updateProfilePhoto(userId, null);
+    if (!updated) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User could not be found.',
+      });
+    }
+
+    const publicUser = this.toPublicUser(updated);
+    await this.cacheService.set(
+      { entity: UsersService.USER_CACHE_ENTITY, id: userId },
+      publicUser,
+      { ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS },
+    );
+
+    this.auditService.record('user.profile.photo.removed', {
+      userId,
+      traceId,
+    });
+
+    return publicUser;
+  }
+
   async validateCredentials(
     email: string,
     password: string,
@@ -155,7 +250,24 @@ export class UsersService implements OnModuleInit {
       displayName: user.displayName,
       locale: user.locale,
       bio: user.bio ?? undefined,
+      photo: (user.profilePhoto as MediaManifest | undefined) ?? undefined,
     };
+  }
+
+  private async safeDeleteMedia(
+    manifest: MediaManifest | null | undefined,
+  ): Promise<void> {
+    if (!manifest) {
+      return;
+    }
+
+    try {
+      await this.mediaService.deleteMedia(manifest);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to delete media manifest ${manifest.manifestKey}: ${(error as Error).message}`,
+      );
+    }
   }
 
   private async getCachedPublicUser(

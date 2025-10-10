@@ -11,6 +11,7 @@ export const ROUTES = {
     root: 'users',
     byId: ':userId',
     deactivate: 'deactivate',
+    profilePhoto: ':userId/profile-photo',
   },
   health: {
     root: 'health',
