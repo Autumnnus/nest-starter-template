@@ -13,7 +13,10 @@ import { CacheService } from 'src/redis/cache.service';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 import { UserEntity } from 'src/users/infrastructure/entities/user.entity';
-import { UsersRepository } from 'src/users/infrastructure/repositories/users.repository';
+import {
+  UpdateProfileInput,
+  UsersRepository,
+} from 'src/users/infrastructure/repositories/users.repository';
 import {
   PublicUser,
   UserProfile,
@@ -79,11 +82,77 @@ export class UsersService implements OnModuleInit {
     userId: string,
     request: UpdateUserDto,
     traceId: string | undefined,
+    photoFile?: Express.Multer.File,
   ): Promise<PublicUser> {
-    const record = await this.usersRepository.updateProfile(
+    const existing = await this.usersRepository.findById(userId);
+    if (!existing) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User could not be found.',
+      });
+    }
+
+    const profile = request.profile ?? {};
+    const updates: UpdateProfileInput = {};
+    const updatedFields = new Set<string>();
+
+    if (profile.displayName !== undefined) {
+      updates.displayName = profile.displayName;
+      updatedFields.add('profile.displayName');
+    }
+
+    if (profile.locale !== undefined) {
+      updates.locale = profile.locale;
+      updatedFields.add('profile.locale');
+    }
+
+    if (profile.bio !== undefined) {
+      updates.bio = profile.bio ?? null;
+      updatedFields.add('profile.bio');
+    }
+
+    if (photoFile) {
+      const [manifest] = await this.mediaService.uploadMedia([photoFile], {
+        purpose: 'avatar',
+      });
+      updates.profilePhotoKey = manifest.manifestKey;
+      updatedFields.add('profile.photo');
+
+      // Ensure old media is removed once the update succeeds.
+      const updated = await this.persistProfileUpdates(userId, updates);
+      await this.safeDeleteMedia(existing.profilePhotoKey);
+
+      return this.afterProfileUpdate(
+        userId,
+        updated,
+        traceId,
+        Array.from(updatedFields),
+      );
+    }
+
+    if (profile.photo === null) {
+      updates.profilePhotoKey = null;
+      updatedFields.add('profile.photo');
+    }
+
+    const updated = await this.persistProfileUpdates(userId, updates);
+    if (profile.photo === null) {
+      await this.safeDeleteMedia(existing.profilePhotoKey);
+    }
+
+    return this.afterProfileUpdate(
       userId,
-      request.profile,
+      updated,
+      traceId,
+      Array.from(updatedFields),
     );
+  }
+
+  private async persistProfileUpdates(
+    userId: string,
+    updates: UpdateProfileInput,
+  ): Promise<UserEntity> {
+    const record = await this.usersRepository.updateProfile(userId, updates);
     if (!record) {
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
@@ -91,7 +160,16 @@ export class UsersService implements OnModuleInit {
       });
     }
 
-    const publicUser = this.toPublicUser(record);
+    return record;
+  }
+
+  private async afterProfileUpdate(
+    userId: string,
+    updated: UserEntity,
+    traceId: string | undefined,
+    updatedFields: string[],
+  ): Promise<PublicUser> {
+    const publicUser = this.toPublicUser(updated);
     await this.cacheService.set(
       { entity: UsersService.USER_CACHE_ENTITY, id: userId },
       publicUser,
@@ -101,94 +179,7 @@ export class UsersService implements OnModuleInit {
     this.auditService.record('user.profile.updated', {
       userId,
       traceId,
-      metadata: {
-        updatedFields: Object.keys(request.profile ?? {}),
-      },
-    });
-
-    return publicUser;
-  }
-
-  async updateProfilePhoto(
-    userId: string,
-    file: Express.Multer.File,
-    traceId: string | undefined,
-  ): Promise<PublicUser> {
-    const existing = await this.usersRepository.findById(userId);
-    if (!existing) {
-      throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
-        message: 'User could not be found.',
-      });
-    }
-
-    const [manifest] = await this.mediaService.uploadMedia([file], {
-      purpose: 'avatar',
-    });
-
-    await this.safeDeleteMedia(existing.profilePhotoKey);
-
-    const updated = await this.usersRepository.updateProfilePhoto(
-      userId,
-      manifest.manifestKey,
-    );
-    if (!updated) {
-      throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
-        message: 'User could not be found.',
-      });
-    }
-
-    const publicUser = this.toPublicUser(updated);
-    await this.cacheService.set(
-      { entity: UsersService.USER_CACHE_ENTITY, id: userId },
-      publicUser,
-      { ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS },
-    );
-
-    this.auditService.record('user.profile.photo.updated', {
-      userId,
-      traceId,
-      metadata: {
-        manifestKey: manifest.manifestKey,
-      },
-    });
-
-    return publicUser;
-  }
-
-  async removeProfilePhoto(
-    userId: string,
-    traceId: string | undefined,
-  ): Promise<PublicUser> {
-    const existing = await this.usersRepository.findById(userId);
-    if (!existing) {
-      throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
-        message: 'User could not be found.',
-      });
-    }
-
-    await this.safeDeleteMedia(existing.profilePhotoKey);
-
-    const updated = await this.usersRepository.updateProfilePhoto(userId, null);
-    if (!updated) {
-      throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
-        message: 'User could not be found.',
-      });
-    }
-
-    const publicUser = this.toPublicUser(updated);
-    await this.cacheService.set(
-      { entity: UsersService.USER_CACHE_ENTITY, id: userId },
-      publicUser,
-      { ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS },
-    );
-
-    this.auditService.record('user.profile.photo.removed', {
-      userId,
-      traceId,
+      metadata: { updatedFields },
     });
 
     return publicUser;
@@ -221,7 +212,7 @@ export class UsersService implements OnModuleInit {
 
   async findUserRecordById(userId: string): Promise<UserRecord | null> {
     const user = await this.getCachedPublicUser(userId);
-    return user ? (user as UserRecord) : null;
+    return user || null;
   }
 
   private toPublicUser(user: UserEntity): PublicUser {

@@ -39,6 +39,17 @@ class UserProfileDto {
   @IsString()
   @MaxLength(500)
   bio?: string;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    type: 'string',
+    format: 'binary',
+    description:
+      'Attach a new profile photo via multipart upload or set to null to remove the current photo.',
+  })
+  @IsOptional()
+  photo?: null;
 }
 
 export class UpdateUserDto {
@@ -52,5 +63,6 @@ export class UpdateUserDto {
   })
   @ValidateNested()
   @Type(() => UserProfileDto)
-  profile!: Partial<UserProfileDto>;
+  @IsOptional()
+  profile?: Partial<UserProfileDto>;
 }

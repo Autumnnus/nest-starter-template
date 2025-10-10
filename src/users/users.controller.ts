@@ -1,22 +1,17 @@
 import {
-  BadRequestException,
   Body,
   Controller,
-  Delete,
   ForbiddenException,
   Get,
   Param,
   Patch,
-  Post,
   Query,
   Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
-  ApiBody,
   ApiConsumes,
   ApiHeader,
   ApiOkResponse,
@@ -28,6 +23,8 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Idempotent } from 'src/common/decorators/idempotent.decorator';
 import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { UserScope } from 'src/common/decorators/user-scope.decorator';
+import { OptionalFileInterceptor } from 'src/common/interceptors/optional-file.interceptor';
 import { ROUTES } from 'src/common/routes';
 import { Role } from 'src/common/types/role.enum';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
@@ -76,9 +73,9 @@ export class UsersController {
     return this.usersService.listUsers(query);
   }
 
-  @Get(':id')
+  @Get(ROUTES.users.byId)
   @ApiOperation({ summary: 'Get user by ID' })
-  @ApiParam({ name: 'id', example: 'u_01', description: 'User ID' })
+  @ApiParam({ name: 'userId', example: 'u_01', description: 'User ID' })
   @ApiOkResponse({
     description: 'User detail',
     schema: {
@@ -97,7 +94,7 @@ export class UsersController {
     },
   })
   async getUser(
-    @Param('id') userId: string,
+    @Param('userId') userId: string,
     @CurrentUser() currentUser: IUser,
   ) {
     const isSelf = currentUser.id === userId;
@@ -114,11 +111,11 @@ export class UsersController {
     return this.usersService.findById(userId);
   }
 
-  @Patch(':id')
+  @Patch(ROUTES.users.byId)
   @Idempotent()
   @RateLimit({ limit: 30, windowSec: 60, strategy: 'fixed' })
   @ApiOperation({ summary: 'Update user profile' })
-  @ApiParam({ name: 'id', example: 'u_01', description: 'User ID' })
+  @ApiParam({ name: 'userId', example: 'u_01', description: 'User ID' })
   @ApiHeader({
     name: 'Idempotency-Key',
     required: true,
@@ -126,127 +123,15 @@ export class UsersController {
     example: 'b2f0d9d2-2d6b-4c9b-8a9f-2f4a1c3d5e6f',
   })
   @ApiBearerAuth('JWT-auth')
-  @ApiOkResponse({
-    description: 'Updated user',
-    schema: {
-      example: {
-        id: 'u_01',
-        email: 'john@example.com',
-        roles: ['USER'],
-        profile: {
-          displayName: 'John Doe',
-          locale: 'en-US',
-          photo:
-            'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
-        },
-      },
-    },
-  })
+  @UseInterceptors(OptionalFileInterceptor('photo', { limits: { files: 1 } }))
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @UserScope({ allowRoles: [Role.Admin], paramKey: 'userId' })
   async updateUser(
-    @Param('id') userId: string,
-    @CurrentUser() currentUser: IUser,
+    @Param('userId') userId: string,
     @Body() body: UpdateUserDto,
+    @UploadedFile() photo: Express.Multer.File | undefined,
     @Req() request: Request,
   ) {
-    this.ensureCanModifyProfile(userId, currentUser);
-
-    return this.usersService.updateUser(userId, body, request.traceId);
-  }
-
-  @Post(':id/profile-photo')
-  @UseInterceptors(FileInterceptor('file', { limits: { files: 1 } }))
-  @RateLimit({ limit: 15, windowSec: 60, strategy: 'fixed' })
-  @ApiOperation({ summary: 'Upload or replace profile photo' })
-  @ApiParam({ name: 'id', example: 'u_01', description: 'User ID' })
-  @ApiBearerAuth('JWT-auth')
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'Profile photo upload (JPEG, PNG, WebP, AVIF, HEIC)',
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Image file to use as profile photo',
-        },
-      },
-      required: ['file'],
-    },
-  })
-  @ApiOkResponse({
-    description: 'Updated user with profile photo reference',
-    schema: {
-      example: {
-        id: 'u_01',
-        email: 'john@example.com',
-        roles: ['USER'],
-        profile: {
-          displayName: 'John Doe',
-          locale: 'en-US',
-          photo:
-            'media/image/avatar/2024/01/01/abcdef123456-uuid/manifest.json',
-        },
-      },
-    },
-  })
-  async uploadProfilePhoto(
-    @Param('id') userId: string,
-    @CurrentUser() currentUser: IUser,
-    @UploadedFile() file: Express.Multer.File,
-    @Req() request: Request,
-  ) {
-    this.ensureCanModifyProfile(userId, currentUser);
-
-    if (!file) {
-      throw new BadRequestException({
-        code: 'MEDIA_FILE_REQUIRED',
-        message: 'A profile photo file must be provided.',
-      });
-    }
-
-    return this.usersService.updateProfilePhoto(userId, file, request.traceId);
-  }
-
-  @Delete(':id/profile-photo')
-  @RateLimit({ limit: 15, windowSec: 60, strategy: 'fixed' })
-  @ApiOperation({ summary: 'Delete profile photo' })
-  @ApiParam({ name: 'id', example: 'u_01', description: 'User ID' })
-  @ApiBearerAuth('JWT-auth')
-  @ApiOkResponse({
-    description: 'Updated user without profile photo',
-    schema: {
-      example: {
-        id: 'u_01',
-        email: 'john@example.com',
-        roles: ['USER'],
-        profile: {
-          displayName: 'John Doe',
-          locale: 'en-US',
-          photo: null,
-        },
-      },
-    },
-  })
-  async deleteProfilePhoto(
-    @Param('id') userId: string,
-    @CurrentUser() currentUser: IUser,
-    @Req() request: Request,
-  ) {
-    this.ensureCanModifyProfile(userId, currentUser);
-
-    return this.usersService.removeProfilePhoto(userId, request.traceId);
-  }
-
-  private ensureCanModifyProfile(userId: string, currentUser: IUser): void {
-    const isSelf = currentUser.id === userId;
-    const isAdmin = currentUser.roles.includes(Role.Admin);
-    if (!isSelf && !isAdmin) {
-      throw new ForbiddenException({
-        code: 'NOT_OWNER_OF_PROFILE',
-        message:
-          'You can only update your own profile unless you are an administrator.',
-      });
-    }
+    return this.usersService.updateUser(userId, body, request.traceId, photo);
   }
 }

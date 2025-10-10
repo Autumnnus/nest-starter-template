@@ -1,9 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ListUsersQueryDto } from 'src/users/dto/list-users.dto';
-import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 import { UserEntity } from 'src/users/infrastructure/entities/user.entity';
 import { Repository } from 'typeorm';
+
+export interface UpdateProfileInput {
+  displayName?: string;
+  locale?: string;
+  bio?: string | null;
+  profilePhotoKey?: string | null;
+}
 
 export interface PaginatedUsersResult {
   items: UserEntity[];
@@ -54,7 +60,7 @@ export class UsersRepository {
 
   async updateProfile(
     userId: string,
-    profile: UpdateUserDto['profile'],
+    profile: UpdateProfileInput,
   ): Promise<UserEntity | null> {
     const partial: Partial<UserEntity> = {};
     if (profile.displayName !== undefined) {
@@ -69,19 +75,15 @@ export class UsersRepository {
       partial.bio = profile.bio ?? null;
     }
 
+    if (profile.profilePhotoKey !== undefined) {
+      partial.profilePhotoKey = profile.profilePhotoKey ?? null;
+    }
+
     if (Object.keys(partial).length === 0) {
       return this.findById(userId);
     }
 
     await this.repository.update({ id: userId }, partial);
-    return this.findById(userId);
-  }
-
-  async updateProfilePhoto(
-    userId: string,
-    photoKey: string | null,
-  ): Promise<UserEntity | null> {
-    await this.repository.update({ id: userId }, { profilePhotoKey: photoKey });
     return this.findById(userId);
   }
 
