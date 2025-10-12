@@ -565,11 +565,6 @@ export class MediaService {
           });
         }
 
-        console.log('file', file);
-        console.log(
-          'this.mediaConfig.maxImageBytes',
-          this.mediaConfig.maxImageBytes,
-        );
         if (file.size > this.mediaConfig.maxImageBytes) {
           throw new BadRequestException({
             code: 'MEDIA_IMAGE_TOO_LARGE',
