@@ -81,6 +81,10 @@ export class SessionStore {
     await this.repository.delete({ id: sessionId });
   }
 
+  async revokeAllForUser(userId: string): Promise<void> {
+    await this.repository.delete({ userId });
+  }
+
   async listByUser(userId: string): Promise<SessionRecord[]> {
     const entities = await this.repository.find({
       where: { userId },

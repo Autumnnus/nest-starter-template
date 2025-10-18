@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { randomBytes } from 'crypto';
 import { AuditService } from 'src/common/services/audit.service';
 import { Role } from 'src/common/types/role.enum';
 import { PaginatedResult } from 'src/common/utils/pagination.util';
@@ -201,11 +204,7 @@ export class UsersService implements OnModuleInit {
     }
 
     const record = this.toUserRecord(entity);
-    await this.cacheService.set(
-      { entity: UsersService.USER_CACHE_ENTITY, id: entity.id },
-      record,
-      { ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS },
-    );
+    await this.cacheUserRecord(record);
 
     return record;
   }
@@ -213,6 +212,130 @@ export class UsersService implements OnModuleInit {
   async findUserRecordById(userId: string): Promise<UserRecord | null> {
     const user = await this.getCachedPublicUser(userId);
     return user || null;
+  }
+
+  async findUserRecordByEmail(email: string): Promise<UserRecord | null> {
+    const entity = await this.usersRepository.findByEmail(email.toLowerCase());
+    if (!entity) {
+      return null;
+    }
+
+    const record = this.toUserRecord(entity);
+    await this.cacheUserRecord(record);
+    return record;
+  }
+
+  async updatePassword(
+    userId: string,
+    newPassword: string,
+    traceId: string | undefined,
+    reason: 'reset' | 'change',
+  ): Promise<void> {
+    const passwordHash = await argon2.hash(newPassword);
+    const updated = await this.usersRepository.updatePassword(
+      userId,
+      passwordHash,
+    );
+    if (!updated) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User could not be found.',
+      });
+    }
+
+    await this.invalidateUserCache(userId);
+    this.auditService.record('user.password.updated', {
+      userId,
+      traceId,
+      metadata: { reason },
+    });
+  }
+
+  async updateEmail(
+    userId: string,
+    newEmail: string,
+    traceId: string | undefined,
+  ): Promise<PublicUser> {
+    const existing = await this.usersRepository.findById(userId);
+    if (!existing) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User could not be found.',
+      });
+    }
+
+    if (existing.email === newEmail) {
+      throw new BadRequestException({
+        code: 'EMAIL_UNCHANGED',
+        message: 'Yeni e-posta adresi mevcut adres ile aynı olamaz.',
+      });
+    }
+
+    const other = await this.usersRepository.findByEmail(newEmail);
+    if (other && other.id !== userId) {
+      throw new ConflictException({
+        code: 'EMAIL_ALREADY_IN_USE',
+        message:
+          'Bu e-posta adresi başka bir kullanıcı tarafından kullanılıyor.',
+      });
+    }
+
+    const updated = await this.usersRepository.updateEmail(userId, newEmail);
+    if (!updated) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User could not be found.',
+      });
+    }
+
+    const publicUser = this.toPublicUser(updated);
+    await this.cacheUserRecord(publicUser);
+    this.auditService.record('user.email.updated', {
+      userId,
+      traceId,
+      metadata: {
+        previousEmail: existing.email,
+        newEmail,
+      },
+    });
+
+    return publicUser;
+  }
+
+  async createOAuthUser(input: {
+    email: string;
+    displayName?: string;
+    locale?: string;
+  }): Promise<UserRecord> {
+    const normalizedEmail = input.email.toLowerCase();
+    const existing = await this.usersRepository.findByEmail(normalizedEmail);
+    if (existing) {
+      const record = this.toUserRecord(existing);
+      await this.cacheUserRecord(record);
+      return record;
+    }
+
+    const passwordSeed = randomBytes(32).toString('hex');
+    const passwordHash = await argon2.hash(passwordSeed);
+    const entity = this.usersRepository.create({
+      email: normalizedEmail,
+      passwordHash,
+      roles: [Role.User],
+      displayName:
+        input.displayName?.trim() || normalizedEmail.split('@')[0] || 'User',
+      locale: input.locale ?? 'en-US',
+      bio: null,
+    });
+
+    const saved = await this.usersRepository.save(entity);
+    const record = this.toUserRecord(saved);
+    await this.cacheUserRecord(record);
+    this.auditService.record('user.account.created', {
+      userId: saved.id,
+      metadata: { provider: 'google-oauth' },
+    });
+
+    return record;
   }
 
   private toPublicUser(user: UserEntity): PublicUser {
@@ -270,6 +393,21 @@ export class UsersService implements OnModuleInit {
         const entity = await this.usersRepository.findById(userId);
         return entity ? this.toPublicUser(entity) : null;
       },
+    });
+  }
+
+  private async cacheUserRecord(record: PublicUser): Promise<void> {
+    await this.cacheService.set(
+      { entity: UsersService.USER_CACHE_ENTITY, id: record.id },
+      record,
+      { ttlSeconds: UsersService.USER_CACHE_TTL_SECONDS },
+    );
+  }
+
+  private async invalidateUserCache(userId: string): Promise<void> {
+    await this.cacheService.delete({
+      entity: UsersService.USER_CACHE_ENTITY,
+      id: userId,
     });
   }
 

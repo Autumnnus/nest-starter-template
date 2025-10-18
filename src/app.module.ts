@@ -21,6 +21,7 @@ import redisConfig from 'src/config/redis.config';
 import s3Config from 'src/config/s3.config';
 import { DatabaseModule } from 'src/database/database.module';
 import { LoggingModule } from 'src/logging/logging.module';
+import { MailModule } from 'src/mail/mail.module';
 import { MediaModule } from 'src/media/media.module';
 import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 import { RedisModule } from 'src/redis/redis.module';
@@ -50,6 +51,7 @@ import { WebsocketModule } from 'src/websocket/websocket.module';
     RedisModule,
     RabbitMQModule,
     WebsocketModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [

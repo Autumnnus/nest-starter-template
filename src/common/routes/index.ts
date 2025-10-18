@@ -6,6 +6,18 @@ export const ROUTES = {
     me: 'me',
     sessions: 'sessions',
     session: 'sessions/:sessionId',
+    password: {
+      requestReset: 'password/reset/request',
+      reset: 'password/reset',
+      change: 'password/change',
+    },
+    email: {
+      requestChange: 'email/change/request',
+      confirm: 'email/change/confirm',
+    },
+    oauth: {
+      google: 'oauth/google',
+    },
   },
   users: {
     root: 'users',

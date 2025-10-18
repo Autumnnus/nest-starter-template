@@ -95,6 +95,19 @@ export class UsersRepository {
     return this.repository.count();
   }
 
+  async updatePassword(
+    userId: string,
+    passwordHash: string,
+  ): Promise<UserEntity | null> {
+    await this.repository.update({ id: userId }, { passwordHash });
+    return this.findById(userId);
+  }
+
+  async updateEmail(userId: string, email: string): Promise<UserEntity | null> {
+    await this.repository.update({ id: userId }, { email });
+    return this.findById(userId);
+  }
+
   create(data: Partial<UserEntity>): UserEntity {
     return this.repository.create(data);
   }

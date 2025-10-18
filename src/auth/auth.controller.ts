@@ -16,8 +16,14 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { AuthService, SignedTokens } from 'src/auth/auth.service';
+import { ChangePasswordDto } from 'src/auth/dto/change-password.dto';
+import { ConfirmEmailChangeDto } from 'src/auth/dto/confirm-email-change.dto';
+import { GoogleOAuthLoginDto } from 'src/auth/dto/google-oauth-login.dto';
 import { LoginDto } from 'src/auth/dto/login.dto';
 import { RefreshTokenDto } from 'src/auth/dto/refresh-token.dto';
+import { RequestEmailChangeDto } from 'src/auth/dto/request-email-change.dto';
+import { RequestPasswordResetDto } from 'src/auth/dto/request-password-reset.dto';
+import { ResetPasswordDto } from 'src/auth/dto/reset-password.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Idempotent } from 'src/common/decorators/idempotent.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -76,6 +82,48 @@ export class AuthController {
   }
 
   @Public()
+  @Post(ROUTES.auth.oauth.google)
+  @Idempotent()
+  @RateLimit({ limit: 5, windowSec: 60, strategy: 'sliding' })
+  @ApiOperation({
+    summary: 'Google ile giriş',
+    description:
+      'Google ID token kullanarak kullanıcıyı kimlik doğrular ve oturum açar.',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Bu isteğe ait benzersiz anahtar (örn. UUID)',
+  })
+  @ApiOkResponse({
+    description: 'Google OAuth giriş başarılı',
+    schema: {
+      example: {
+        tokenType: 'Bearer',
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        expiresIn: 900,
+        refreshToken: 'rt_8nRm...1pQ',
+        session: {
+          id: 'sess_01J7ZD...',
+          createdAt: '2025-09-25T18:40:00.000Z',
+          lastAccessedAt: '2025-09-25T18:40:00.000Z',
+          expiresAt: '2025-10-25T18:40:00.000Z',
+          device: { id: 'android-device-123', name: 'Pixel 9' },
+        },
+      },
+    },
+  })
+  async googleLogin(
+    @Body() body: GoogleOAuthLoginDto,
+    @Req() request: Request,
+  ): Promise<SignedTokens> {
+    return this.authService.loginWithGoogle(body, request.traceId, {
+      ipAddress: request.ip,
+      userAgent: request.headers['user-agent'],
+    });
+  }
+
+  @Public()
   @Post(ROUTES.auth.refresh)
   @Idempotent()
   @RateLimit({ limit: 10, windowSec: 60, strategy: 'sliding' })
@@ -109,6 +157,126 @@ export class AuthController {
   })
   async refresh(@Body() body: RefreshTokenDto, @Req() request: Request) {
     return this.authService.refreshTokens(body, request.traceId);
+  }
+
+  @Public()
+  @Post(ROUTES.auth.password.requestReset)
+  @Idempotent()
+  @RateLimit({ limit: 3, windowSec: 300, strategy: 'fixed' })
+  @ApiOperation({
+    summary: 'Şifre sıfırlama talebi',
+    description:
+      'Geçerli bir e-posta ile şifre sıfırlama bağlantısı gönderilmesini sağlar.',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Bu isteğe ait benzersiz anahtar (örn. UUID)',
+  })
+  @ApiOkResponse({
+    description: 'Şifre sıfırlama e-postası kuyruğa alındı',
+    schema: { example: { status: 'email_sent' } },
+  })
+  async requestPasswordReset(
+    @Body() body: RequestPasswordResetDto,
+    @Req() request: Request,
+  ) {
+    return this.authService.requestPasswordReset(body, request.traceId, {
+      ipAddress: request.ip,
+      userAgent: request.headers['user-agent'],
+    });
+  }
+
+  @Public()
+  @Post(ROUTES.auth.password.reset)
+  @Idempotent()
+  @RateLimit({ limit: 5, windowSec: 300, strategy: 'fixed' })
+  @ApiOperation({
+    summary: 'Şifre sıfırlama',
+    description: 'Geçerli token ve yeni şifre ile hesabın şifresini günceller.',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Bu isteğe ait benzersiz anahtar (örn. UUID)',
+  })
+  @ApiOkResponse({
+    description: 'Şifre başarıyla güncellendi',
+    schema: { example: { status: 'password_reset' } },
+  })
+  async resetPassword(@Body() body: ResetPasswordDto, @Req() request: Request) {
+    return this.authService.resetPassword(body, request.traceId);
+  }
+
+  @Post(ROUTES.auth.password.change)
+  @Idempotent()
+  @RateLimit({ limit: 5, windowSec: 300, strategy: 'sliding' })
+  @ApiOperation({ summary: 'Şifre değiştir' })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Bu isteğe ait benzersiz anahtar (örn. UUID)',
+  })
+  @ApiOkResponse({
+    description: 'Şifre değiştirildi',
+    schema: { example: { status: 'password_changed' } },
+  })
+  @ApiBearerAuth('JWT-auth')
+  async changePassword(
+    @CurrentUser() user: IUser,
+    @Body() body: ChangePasswordDto,
+    @Req() request: Request,
+  ) {
+    return this.authService.changePassword(user.id, body, request.traceId);
+  }
+
+  @Post(ROUTES.auth.email.requestChange)
+  @Idempotent()
+  @RateLimit({ limit: 3, windowSec: 600, strategy: 'fixed' })
+  @ApiOperation({
+    summary: 'E-posta değişikliği talep et',
+    description: 'Yeni e-posta adresine doğrulama bağlantısı gönderir.',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Bu isteğe ait benzersiz anahtar (örn. UUID)',
+  })
+  @ApiOkResponse({
+    description: 'Doğrulama e-postası gönderildi',
+    schema: { example: { status: 'verification_sent' } },
+  })
+  @ApiBearerAuth('JWT-auth')
+  async requestEmailChange(
+    @CurrentUser() user: IUser,
+    @Body() body: RequestEmailChangeDto,
+    @Req() request: Request,
+  ) {
+    return this.authService.requestEmailChange(user.id, body, request.traceId);
+  }
+
+  @Public()
+  @Post(ROUTES.auth.email.confirm)
+  @Idempotent()
+  @RateLimit({ limit: 5, windowSec: 600, strategy: 'fixed' })
+  @ApiOperation({
+    summary: 'E-posta değişikliğini doğrula',
+    description: 'Geçerli doğrulama tokenı ile yeni e-posta adresini onaylar.',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Bu isteğe ait benzersiz anahtar (örn. UUID)',
+  })
+  @ApiOkResponse({
+    description: 'E-posta güncellendi',
+    schema: { example: { status: 'email_updated', email: 'new@example.com' } },
+  })
+  async confirmEmailChange(
+    @Body() body: ConfirmEmailChangeDto,
+    @Req() request: Request,
+  ) {
+    return this.authService.confirmEmailChange(body, request.traceId);
   }
 
   @Get(ROUTES.auth.sessions)
